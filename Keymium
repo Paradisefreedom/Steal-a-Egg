@@ -6,6 +6,7 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deivi
 
 local Window = Library:CreateWindow({
     Title = "ShinyLeak",
+    Icon = https://static.vecteezy.com/system/resources/previews/026/830/179/original/white-light-effect-free-png.png
     Footer = "v1.0.0",
     ToggleKeybind = Enum.KeyCode.RightControl,
     Center = true,
@@ -13,11 +14,11 @@ local Window = Library:CreateWindow({
 })
 
 -- TABS
-local MainTab = Window:AddTab("Main", "home")
-local LeftGroupbox = MainTab:AddLeftGroupbox("Settings")
-local RightGroupbox = MainTab:AddRightGroupbox("Information")
+local MainTab = Window:AddTab("Autofarm", "home")
+local LeftGroupbox = MainTab:AddLeftGroupbox("Auto Egg")
+local RightGroupbox = MainTab:AddRightGroupbox("Auto hatch")
 
 -- TAB BOXES
-local Tabbox = MainTab:AddLeftTabbox("Settings")
-local Tab1 = Tabbox:AddTab("General")
-local Tab2 = Tabbox:AddTab("Advanced")
+local Tabbox = MainTab:AddLeftTabbox("Type")
+local Tab1 = Tabbox:AddTab("Hover")
+local Tab2 = Tabbox:AddTab("Teleport")
