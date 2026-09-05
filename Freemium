@@ -3,7 +3,6 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
 
 -- WINDOWS
-
 local Window = Library:CreateWindow({
     Title = "ShinyLeak",
     Footer = "v1.0.0",
@@ -13,5 +12,515 @@ local Window = Library:CreateWindow({
 })
 
 -- TABS
+local MainTab = Window:AddTab("Main", "home")
+local LeftGroupbox = MainTab:AddLeftGroupbox("Settings")
+local RightGroupbox = MainTab:AddRightGroupbox("Information")
+
+-- TAB BOXES
+local Tabbox = MainTab:AddLeftTabbox("Settings")
+local Tab1 = Tabbox:AddTab("General")
+local Tab2 = Tabbox:AddTab("Advanced")
+
+-- TEXT
+local Label = Groupbox:AddLabel("This is a label")
+local WrappedLabel = Groupbox:AddLabel({
+    Text = "This is a wrapped label that will break into multiple lines",
+    DoesWrap = true
+})
+
+-- BUTTON FUNCTION
+local Button = Groupbox:AddButton({
+    Text = "Click Me",
+    Func = function()
+        print("Button clicked!")
+    end,
+    DoubleClick = true -- Requires double-click for risky actions
+})
+
+-- SUB BUTTONS
+Button:AddButton({
+    Text = "Sub Button",
+    Func = function()
+        print("Sub-button clicked!")
+    end
+})
+
+-- TOGGEL BOXES
+-- Always capture the reference returned by AddToggle
+local MyToggle = Groupbox:AddToggle("MyToggle", {
+    Text = "Example Toggle",
+    Default = false,
+    Tooltip = "This is a toggle",
+    Callback = function(Value)
+        print("Toggle changed to:", Value)
+    end
+})
+
+-- You can use :OnChanged to add another callback
+MyToggle:OnChanged(function(Value)
+    print("Toggle changed via OnChanged:", Value)
+})
+
+-- You can also create checkboxes instead of switch-style toggles
+local MyCheckbox = Groupbox:AddCheckbox("MyCheckbox", {
+    Text = "Example Checkbox",
+    Default = false,
+    Callback = function(Value)
+        print("Checkbox changed to:", Value)
+    end
+})
+
+-- INPUT
+local Input = Groupbox:AddInput("MyInput", {
+    Text = "Input Example",
+    Default = "Default value",
+    Numeric = false,
+    Finished = true, -- Only calls callback when you press enter
+    Placeholder = "Enter text here...",
+    Callback = function(Value)
+        print("Input updated:", Value)
+    end
+})
+
+-- SLIDER FUNCTION
+local Slider = Groupbox:AddSlider("MySlider", {
+    Text = "Example Slider",
+    Default = 50,
+    Min = 0,
+    Max = 100,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(Value)
+        print("Slider changed to:", Value)
+    end
+})
+
+-- DROP DOWN
+local Dropdown = Groupbox:AddDropdown("MyDropdown", {
+    Values = {"Option 1", "Option 2", "Option 3"},
+    Default = 1, -- Index of the default option
+    Multi = false, -- Whether to allow multiple selections
+    Text = "Example Dropdown",
+    Tooltip = "This is a dropdown",
+    Callback = function(Value)
+        print("Dropdown new value:", Value)
+    end
+})
+
+-- Multi-select dropdown
+local MultiDropdown = Groupbox:AddDropdown("MyMultiDropdown", {
+    Values = {"Option A", "Option B", "Option C"},
+    Default = {"Option A"}, -- Default selected values for multi-select
+    Multi = true,
+    Text = "Multi-Select Example",
+    Callback = function(Values)
+        for Value, Selected in pairs(Values) do
+            if Selected then
+                print("Selected:", Value)
+            end
+        end
+    end
+})
+
+-- Player dropdown (automatically updates with players)
+local PlayerDropdown = Groupbox:AddDropdown("PlayerDropdown", {
+    SpecialType = "Player",
+    Text = "Select Players",
+    Multi = true,
+    ExcludeLocalPlayer = true
+})
+
+-- Team dropdown (automatically updates with teams)
+local TeamDropdown = Groupbox:AddDropdown("TeamDropdown", {
+    SpecialType = "Team", 
+    Text = "Select Team"
+})
+
+-- keybinds
+local MyToggle = Groupbox:AddToggle("MyToggle", {
+    Text = "Example Toggle",
+    Default = false
+})
+
+-- Then add a keybind to it using the reference
+local Keybind = MyToggle:AddKeyPicker("MyKeybind", {
+    Default = "F",
+    Text = "Example Keybind",
+    Mode = "Toggle", -- Options: "Toggle", "Hold", "Always"
+    
+    -- Sets the toggle's value according to the keybind state if Mode is Toggle
+    SyncToggleState = false,
+    
+    Callback = function(Value)
+        print("Keybind pressed, value:", Value)
+    end
+})
+
+-- colorpickers
+local MyToggle = Groupbox:AddToggle("MyToggle", {
+    Text = "Example Toggle",
+    Default = false
+})
+
+-- Then add a color picker to it using the reference
+local ColorPicker = MyToggle:AddColorPicker("MyColorPicker", {
+    Default = Color3.fromRGB(255, 0, 0),
+    Title = "Select Color",
+    Transparency = 0, -- 0 to 1
+    
+    Callback = function(Value)
+        print("Color changed to:", Value)
+    end
+})
+
+-- dividers
+Groupbox:AddDivider()
+
+-- Simple notification
+Library:Notify("This is a notification", 5) -- Second param is duration in seconds
+
+-- Advanced notification
+Library:Notify({
+    Title = "Success",
+    Description = "Operation completed successfully",
+    Time = 5, -- Duration in seconds
+    SoundId = 123456789 -- Optional sound ID
+})
+
+-- Getting notification object for manipulation
+local Notification = Library:Notify({
+    Title = "Progress",
+    Description = "Processing...",
+    Time = 10
+})
+
+-- Update notification text
+Notification:ChangeTitle("Almost done")
+Notification:ChangeDescription("Finalizing...")
+
+-- For step notifications
+local StepNotification = Library:Notify({
+    Title = "Progress",
+    Description = "Downloading files...",
+    Steps = 5, -- Total number of steps
+    Time = someInstanceThatFires -- or use a number for time-based
+})
+
+-- Update steps
+StepNotification:ChangeStep(2) -- Set to step 2 of 5
+
+-- Tooltips
+local Button = Groupbox:AddButton({
+    Text = "Help",
+    Tooltip = "Click for assistance",
+    DisabledTooltip = "Currently unavailable"
+})
+
+-- Manual tooltip creation
+local TooltipObject = Library:AddTooltip("Normal info", "Disabled info", someGuiElement)
+
+-- The keybind menu
+Library.ShowToggleFrameInKeybinds = true -- Show toggle state in keybind menu
+
+-- Enable/disable the custom cursor
+Library.ShowCustomCursor = true
+
+-- Check if the user is on mobile
+if Library.IsMobile then
+    -- Adjust your UI accordingly
+end
+
+-- Mobile button positioning
+Window = Library:CreateWindow({
+    MobileButtonsSide = "Right" -- "Left" or "Right"
+})
+
+-- Set custom colors
+Library.Scheme = {
+    BackgroundColor = Color3.fromRGB(15, 15, 15),
+    MainColor = Color3.fromRGB(25, 25, 25),
+    AccentColor = Color3.fromRGB(125, 85, 255),
+    OutlineColor = Color3.fromRGB(40, 40, 40),
+    FontColor = Color3.new(1, 1, 1),
+    Font = Font.fromEnum(Enum.Font.Gotham),
+}
+
+-- Change font
+Library:SetFont(Enum.Font.Gotham)
+
+-- Change DPI scale
+Library:SetDPIScale(150) -- 150% scaling
+
+-- Create a basic window with common elements
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
+
+local Window = Library:CreateWindow({
+    Title = "My Script",
+    Footer = "v1.0.0",
+    Center = true,
+    AutoShow = true
+})
 
 local MainTab = Window:AddTab("Main", "home")
+local SettingsTab = Window:AddTab("Settings", "settings")
+
+-- Add a groupbox to the left side
+local LeftGroupbox = MainTab:AddLeftGroupbox("Features")
+
+-- Add toggles, buttons, sliders
+local MyToggle = LeftGroupbox:AddToggle("MyToggle", {
+    Text = "Enable Feature",
+    Default = false,
+    Tooltip = "Enables the main feature",
+    Callback = function(Value)
+        print("Feature enabled:", Value)
+    end
+})
+
+local MyButton = LeftGroupbox:AddButton({
+    Text = "Run Action",
+    Func = function()
+        print("Action running!")
+    end
+})
+
+local MySlider = LeftGroupbox:AddSlider("MySlider", {
+    Text = "Speed",
+    Default = 50,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Suffix = "%",
+    Callback = function(Value)
+        print("Speed set to:", Value)
+    end
+})
+
+-- Add a dropdown
+local MyDropdown = LeftGroupbox:AddDropdown("MyDropdown", {
+    Values = {"Option 1", "Option 2", "Option 3"},
+    Default = 1,
+    Text = "Select Option",
+    Callback = function(Value)
+        print("Selected:", Value)
+    end
+})
+
+-- Add a groupbox to the right side
+local RightGroupbox = MainTab:AddRightGroupbox("Information")
+
+-- Add a label
+RightGroupbox:AddLabel("Welcome to my script!")
+
+-- Add a tabbox
+local MyTabbox = SettingsTab:AddLeftTabbox("Settings")
+local ConfigTab = MyTabbox:AddTab("Config")
+local ThemeTab = MyTabbox:AddTab("Theme")
+
+-- Add config elements
+ConfigTab:AddButton({
+    Text = "Save Config",
+    Func = function()
+        Library:Notify("Config saved!")
+    end
+})
+
+-- Add toggle with keybind - IMPORTANT: Capture the toggle reference
+local ToggleWithKeybind = LeftGroupbox:AddToggle("ToggleWithKey", {
+    Text = "Toggle with Keybind",
+    Default = false,
+    Callback = function(Value)
+        print("Toggled with keybind:", Value)
+    end
+})
+
+-- Add keybind to the toggle using the reference
+local MyKeybind = ToggleWithKeybind:AddKeyPicker("MyKeybind", {
+    Default = "G",
+    Mode = "Toggle",
+    Text = "Toggle Feature",
+    SyncToggleState = true,
+})
+
+-- Add a color picker to the toggle using the reference
+local MyColorPicker = ToggleWithKeybind:AddColorPicker("MyColorPicker", {
+    Default = Color3.fromRGB(255, 0, 0),
+    Title = "UI Color",
+    Callback = function(Value)
+        Library.Scheme.AccentColor = Value
+        Library:UpdateColorsUsingRegistry()
+    end
+})
+
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
+
+local Window = Library:CreateWindow({
+    Title = "Advanced Example",
+    Size = UDim2.fromOffset(550, 480),
+    Center = true
+})
+
+local MainTab = Window:AddTab("Main")
+local ConfigTab = Window:AddTab("Config")
+
+-- Main features
+local FeaturesBox = MainTab:AddLeftTabbox("Features")
+local GeneralTab = FeaturesBox:AddTab("General")
+local CombatTab = FeaturesBox:AddTab("Combat")
+local VisualsTab = FeaturesBox:AddTab("Visuals")
+
+-- General features
+local WalkSpeedToggle = GeneralTab:AddToggle("WalkSpeed", {
+    Text = "Custom Walk Speed",
+    Default = false,
+    Callback = function(Value)
+        print("Walk Speed enabled:", Value)
+    end
+})
+
+local SpeedSlider = GeneralTab:AddSlider("SpeedValue", {
+    Text = "Speed Value",
+    Default = 16,
+    Min = 16,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(Value)
+        print("Speed set to:", Value)
+    end
+})
+
+-- Combat features - IMPORTANT: Capture references directly
+local AimbotToggle = CombatTab:AddToggle("Aimbot", {
+    Text = "Aimbot",
+    Default = false,
+    Tooltip = "Automatically aims at enemies",
+    Callback = function(Value)
+        print("Aimbot enabled:", Value)
+    end
+})
+
+-- Use the direct reference to add the keybind
+AimbotToggle:AddKeyPicker("AimbotKey", {
+    Default = "E",
+    Mode = "Hold",
+    Text = "Aimbot",
+    Callback = function(Value)
+        print("Aimbot key held:", Value)
+    end
+})
+
+local TargetDropdown = CombatTab:AddDropdown("AimbotTarget", {
+    Text = "Target",
+    Values = {"Head", "Torso", "Random"},
+    Default = 1,
+    Callback = function(Value)
+        print("Aimbot targeting:", Value)
+    end
+})
+
+-- Visuals features - IMPORTANT: Capture references directly
+local ESPToggle = VisualsTab:AddToggle("ESP", {
+    Text = "ESP",
+    Default = false,
+    Callback = function(Value)
+        print("ESP enabled:", Value)
+    end
+})
+
+-- Use the direct reference to add the color picker
+ESPToggle:AddColorPicker("ESPColor", {
+    Default = Color3.fromRGB(255, 0, 0),
+    Title = "ESP Color",
+    Callback = function(Value)
+        print("ESP color set to:", Value)
+    end
+})
+
+local ESPOptions = VisualsTab:AddDropdown("ESPOptions", {
+    Text = "ESP Options",
+    Values = {"Boxes", "Names", "Health", "Distance"},
+    Multi = true,
+    Default = {"Boxes", "Names"},
+    Callback = function(Values)
+        for Option, Enabled in pairs(Values) do
+            if Enabled then
+                print("ESP option enabled:", Option)
+            end
+        end
+    end
+})
+
+-- Config section
+local SaveBox = ConfigTab:AddLeftGroupbox("Save Configuration")
+
+local ConfigNameInput = SaveBox:AddInput("ConfigName", {
+    Text = "Config Name",
+    Default = "MyConfig",
+    Placeholder = "Enter name...",
+    Finished = true
+})
+
+SaveBox:AddButton({
+    Text = "Save Config",
+    Func = function()
+        local name = Options.ConfigName.Value
+        Library:Notify({
+            Title = "Config Saved",
+            Description = "Saved configuration as " .. name,
+            Time = 3
+        })
+    end
+})
+
+SaveBox:AddButton({
+    Text = "Load Config",
+    Func = function()
+        local name = Options.ConfigName.Value
+        Library:Notify({
+            Title = "Config Loaded",
+            Description = "Loaded configuration " .. name,
+            Time = 3
+        })
+    end
+})
+
+-- Player list
+local PlayerBox = MainTab:AddRightGroupbox("Players")
+
+local PlayerSelector = PlayerBox:AddDropdown("PlayerList", {
+    SpecialType = "Player",
+    Text = "Select Player",
+    Tooltip = "Select a player to target",
+    Callback = function(Value)
+        print("Selected player:", Value)
+    end
+})
+
+-- Theme settings
+local ThemeBox = ConfigTab:AddRightGroupbox("UI Settings")
+
+local ThemeToggle = ThemeBox:AddToggle("CustomTheme", {
+    Text = "Custom Theme",
+    Default = false,
+    Callback = function(Value)
+        print("Custom theme enabled:", Value)
+    end
+})
+
+local UIScaleSlider = ThemeBox:AddSlider("UIScale", {
+    Text = "UI Scale",
+    Default = 100,
+    Min = 75,
+    Max = 150,
+    Rounding = 0,
+    Suffix = "%",
+    Callback = function(Value)
+        Library:SetDPIScale(Value)
+    end
+})
+
+-- Set a keybind toggler
+ThemeBox:AddLabel("Press Right-Ctrl to toggle the UI")
+
+-- Show the UI
+Library:Toggle(true)
