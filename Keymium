@@ -11,3 +11,13 @@ local Window = Library:CreateWindow({
     Center = true,
     AutoShow = true
 })
+
+-- TABS
+local MainTab = Window:AddTab("Main", "home")
+local LeftGroupbox = MainTab:AddLeftGroupbox("Settings")
+local RightGroupbox = MainTab:AddRightGroupbox("Information")
+
+-- TAB BOXES
+local Tabbox = MainTab:AddLeftTabbox("Settings")
+local Tab1 = Tabbox:AddTab("General")
+local Tab2 = Tabbox:AddTab("Advanced")
