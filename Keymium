@@ -5,7 +5,6 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deivi
 -- WINDOWS
 local Window = Library:CreateWindow({
     Title = "ShinyLeak",
-    Icon = https://static.vecteezy.com/system/resources/previews/026/830/179/original/white-light-effect-free-png.png,
     Footer = "v1.0.0",
     ToggleKeybind = Enum.KeyCode.RightControl,
     Center = true,
