@@ -2,7 +2,7 @@
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
 
--- WINDOWS
+-- WINDOW
 local Window = Library:CreateWindow({
     Title = "ShinyLeak",
     Footer = "v1.0.0",
@@ -15,13 +15,8 @@ local Window = Library:CreateWindow({
 local MainTab = Window:AddTab("Main", "home")
 local ESPTab = Window:AddTab("ESP", "eye")
 
--- MAIN TAB - TABBOX
-local Tabbox = MainTab:AddLeftTabbox("Settings")
-local Tab1 = Tabbox:AddTab("General")
-local Tab2 = Tabbox:AddTab("Advanced")
-
--- Add groupbox inside General tab so content is visible
-local GeneralGroupbox = Tab1:AddLeftGroupbox("Farming")
+-- MAIN TAB - GROUPBOXES
+local FarmingGroupbox = MainTab:AddLeftGroupbox("Farming")
 
 -- AUTO FARM EGG FUNCTION
 local function autoFarmEggs()
@@ -29,20 +24,20 @@ local function autoFarmEggs()
     local character = player.Character or player.CharacterAdded:Wait()
     local humanoid = character:WaitForChild("Humanoid")
     local egg = workspace:FindFirstChild("Egg")
-    
+
     if egg then
         local targetPosition = egg:GetPivot().Position
         print("Egg position: ", targetPosition)
-        
-        -- Make the character hover/fly to the egg
+
+        -- Move to egg
         humanoid:MoveTo(targetPosition)
         
-        -- Optional: Set the humanoid to flying state for better movement
+        -- Enable flying for smooth movement
         if humanoid:GetState() ~= Enum.HumanoidStateType.Flying then
             humanoid:ChangeState(Enum.HumanoidStateType.Flying)
         end
-        
-        -- Wait until character reaches the destination
+
+        -- Keep moving until close enough
         repeat
             task.wait()
             humanoid:MoveTo(targetPosition)
@@ -52,39 +47,39 @@ local function autoFarmEggs()
     end
 end
 
--- ADD BUTTON TO GENERAL TAB (inside the groupbox)
-GeneralGroupbox:AddButton("Auto Farm Eggs", function()
+-- BUTTON
+FarmingGroupbox:AddButton("Auto Farm Eggs", function()
     autoFarmEggs()
 end)
 
--- ESP TAB CONTENT
+-- ESP TAB
 local ESPGroupbox = ESPTab:AddLeftGroupbox("Egg ESP")
 
--- ESP toggle and highlight logic
 local espEnabled = false
 
 local function updateESP()
     local egg = workspace:FindFirstChild("Egg")
     if not egg then
-        print("Egg not found in workspace")
+        print("Egg not found")
         return
     end
-    
+
     if espEnabled then
-        -- Create highlight if not exists
+        -- Add highlight if not already there
         if not egg:FindFirstChild("ESP_Highlight") then
             local highlight = Instance.new("Highlight")
             highlight.Name = "ESP_Highlight"
-            highlight.FillColor = Color3.fromRGB(255, 255, 0) -- Yellow fill
-            highlight.OutlineColor = Color3.fromRGB(255, 0, 0) -- Red outline
+            highlight.FillColor = Color3.fromRGB(255, 255, 0)   -- yellow fill
+            highlight.OutlineColor = Color3.fromRGB(255, 0, 0)  -- red outline
             highlight.FillTransparency = 0.5
             highlight.OutlineTransparency = 0
             highlight.Parent = egg
         end
     else
-        -- Remove highlight if exists
-        if egg:FindFirstChild("ESP_Highlight") then
-            egg:FindFirstChild("ESP_Highlight"):Destroy()
+        -- Remove highlight
+        local hl = egg:FindFirstChild("ESP_Highlight")
+        if hl then
+            hl:Destroy()
         end
     end
 end
@@ -99,7 +94,7 @@ ESPGroupbox:AddToggle("Enable Egg ESP", {
 
 ESPGroupbox:AddLabel("Highlights eggs through walls")
 
--- Also handle if egg is added later
+-- Auto-update ESP when an egg is added later
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "Egg" and espEnabled then
         updateESP()
