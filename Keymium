@@ -30,3 +30,15 @@ local Tab1 = Tabbox:AddTab("Island")
 local Tabbox = MainTab:AddRightTabbox("Speed")
 local Tab2 = Tabbox:AddTab("hover speed")
 local Tab2 = Tabbox:AddTab("manuel Speed")
+
+-- Toggle
+LeftGroupBox:AddToggle('MyToggle', {
+    Text = 'Enable Speed Boost',
+    Default = false, -- Default state (true or false)
+    Tooltip = 'Makes your character walk faster!', -- Description on hover
+    
+    Callback = function(Value)
+        -- Code that runs when the toggle changes
+        print('Speed boost is now:', Value)
+    end
+})
