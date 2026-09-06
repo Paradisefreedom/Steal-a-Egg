@@ -15,9 +15,6 @@ local Window = Library:CreateWindow({
 local MainTab = Window:AddTab("Main", "home")
 local ESPTab = Window:AddTab("ESP", "eye")
 
-local LeftGroupbox = MainTab:AddLeftGroupbox("Settings")
-local RightGroupbox = MainTab:AddRightGroupbox("Information")
-
 -- TAB BOXES
 local Tabbox = MainTab:AddLeftTabbox("Settings")
 local Tab1 = Tabbox:AddTab("General")
@@ -52,16 +49,14 @@ local function autoFarmEggs()
     end
 end
 
--- ADD BUTTON TO GENERAL TAB (Correct syntax from the example)
-Tab1:AddButton({
-    Name = "Auto Farm Eggs",
-    Callback = function()
-        autoFarmEggs()
-    end
-})
+-- ADD BUTTON TO GENERAL TAB
+Tab1:AddButton("Auto Farm Eggs", function()
+    autoFarmEggs()
+end)
 
 -- ESP TAB CONTENT
-local ESPGroupbox = ESPTab:AddLeftGroupbox("Egg ESP")
+local ESPLeftGroupbox = ESPTab:AddLeftGroupbox("Egg ESP")
+local ESPRightGroupbox = ESPTab:AddRightGroupbox("Settings")
 
 -- ESP Function to highlight eggs
 local function enableEggESP()
@@ -93,12 +88,9 @@ local function disableEggESP()
 end
 
 -- ESP Toggle
-local espEnabled = false
-ESPGroupbox:AddToggle({
-    Name = "Egg ESP",
+ESPLeftGroupbox:AddToggle("Egg ESP", {
     Default = false,
     Callback = function(value)
-        espEnabled = value
         if value then
             enableEggESP()
         else
@@ -107,10 +99,18 @@ ESPGroupbox:AddToggle({
     end
 })
 
-ESPGroupbox:AddLabel("Shows eggs through walls")
+ESPLeftGroupbox:AddLabel("Shows eggs through walls")
 
--- Information tab content
-RightGroupbox:AddLabel("ShinyLeak v1.0.0")
-RightGroupbox:AddLabel("Made with ❤️")
-RightGroupbox:AddLabel("Use ESP tab to see eggs")
-RightGroupbox:AddLabel("Click Auto Farm in General tab")
+-- Optional: Continuously check for new eggs
+game.Workspace.ChildAdded:Connect(function(child)
+    if child.Name == "Egg" and ESPLeftGroupbox then
+        -- Re-enable ESP if it's active
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESP_Highlight"
+        highlight.FillColor = Color3.fromRGB(255, 255, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Parent = child
+    end
+end)
