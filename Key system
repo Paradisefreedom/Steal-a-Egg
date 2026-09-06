@@ -1,117 +1,193 @@
 -- SERVICES
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 -- CONFIGURATION
-local CORRECT_KEY = "MY_SECRET_KEY_123"
-local GET_KEY_URL = "https://your-key-link-here.com" -- Put your Linkvertise/Loot-Link here
+local CORRECT_KEY = "wscq542$"
+local GET_KEY_URL = "https://link-target.net/8823345/P44xmbl0LhGN"
 
 --------------------------------------------------------------------------------
--- UPGRADED MODERN KEY SYSTEM GUI
+-- CYBER-TECH GUI CONTAINER
 --------------------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ModernKeySystem"
+ScreenGui.Name = "CyberTechKeySystem"
 ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Main Container Window
+-- Main Futuristic Window
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 360, 0, 220)
-MainFrame.Position = UDim2.new(0.5, -180, 0.5, -110)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22) -- Sleek dark theme
+MainFrame.Size = UDim2.new(0, 420, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -130)
+MainFrame.BackgroundColor3 = Color3.fromRGB(13, 15, 20)
 MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.CornerRadius = UDim.new(0, 12)
 UICorner.Parent = MainFrame
 
--- Subtle border stroke for modern look
+-- Neon Cyber Border Stroke
 local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(45, 45, 55)
+UIStroke.Color = Color3.fromRGB(0, 229, 255) -- Cyber Cyan
+UIStroke.Transparency = 0.4
 UIStroke.Thickness = 1.5
 UIStroke.Parent = MainFrame
 
--- Title
+-- Top Accent Line (Glowing Tech Bar)
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 3)
+TopBar.BackgroundColor3 = Color3.fromRGB(0, 229, 255)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopBarGradient = Instance.new("UIGradient")
+TopBarGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 229, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(124, 58, 237)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 229, 255))
+})
+TopBarGradient.Parent = TopBar
+
+-- Header / Title Area
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 50)
-Title.Position = UDim2.new(0, 0, 0, 10)
+Title.Size = UDim2.new(1, -40, 0, 30)
+Title.Position = UDim2.new(0, 25, 0, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "Authentication Required"
-Title.TextColor3 = Color3.fromRGB(240, 240, 255)
-Title.TextSize = 18
-Title.Font = Enum.Font.GothamBold
+Title.Text = "SYSTEM // AUTHENTICATION"
+Title.TextColor3 = Color3.fromRGB(240, 245, 255)
+Title.TextSize = 16
+Title.Font = Enum.Font.Code
+Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MainFrame
 
--- Subtitle description
 local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(1, -40, 0, 20)
-SubTitle.Position = UDim2.new(0, 20, 0, 55)
+SubTitle.Position = UDim2.new(0, 25, 0, 50)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "Please enter your key to access the script."
-SubTitle.TextColor3 = Color3.fromRGB(150, 150, 170)
-SubTitle.TextSize = 13
-SubTitle.Font = Enum.Font.Gotham
+SubTitle.Text = "SECURE ACCESS PROTOCOL v4.2"
+SubTitle.TextColor3 = Color3.fromRGB(100, 116, 139)
+SubTitle.TextSize = 11
+SubTitle.Font = Enum.Font.Code
+SubTitle.TextXAlignment = Enum.TextXAlignment.Left
 SubTitle.Parent = MainFrame
 
--- Textbox (Key Input)
+-- Input Container (Tech Box)
+local InputContainer = Instance.new("Frame")
+InputContainer.Size = UDim2.new(1, -50, 0, 48)
+InputContainer.Position = UDim2.new(0, 25, 0, 90)
+InputContainer.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
+InputContainer.BorderSizePixel = 0
+InputContainer.Parent = MainFrame
+
+local InputCorner = Instance.new("UICorner")
+InputCorner.CornerRadius = UDim.new(0, 8)
+InputCorner.Parent = InputContainer
+
+local InputStroke = Instance.new("UIStroke")
+InputStroke.Color = Color3.fromRGB(40, 45, 60)
+InputStroke.Thickness = 1
+InputStroke.Parent = InputContainer
+
 local TextBox = Instance.new("TextBox")
-TextBox.Size = UDim2.new(0, 320, 0, 42)
-TextBox.Position = UDim2.new(0.5, -160, 0, 85)
-TextBox.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
-TextBox.PlaceholderText = "Enter key here..."
+TextBox.Size = UDim2.new(1, -20, 1, 0)
+TextBox.Position = UDim2.new(0, 10, 0, 0)
+TextBox.BackgroundTransparency = 1
+TextBox.PlaceholderText = "INPUT KEY STRING HERE..."
 TextBox.Text = ""
 TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-TextBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 120)
-TextBox.TextSize = 14
-TextBox.Font = Enum.Font.Gotham
-TextBox.Parent = MainFrame
+TextBox.PlaceholderColor3 = Color3.fromRGB(90, 105, 130)
+TextBox.TextSize = 13
+TextBox.Font = Enum.Font.Code
+TextBox.TextXAlignment = Enum.TextXAlignment.Left
+TextBox.Parent = InputContainer
 
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 8)
-BoxCorner.Parent = TextBox
+-- Status Indicator Text
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -50, 0, 20)
+StatusLabel.Position = UDim2.new(0, 25, 0, 145)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "[ STATUS: WAITING FOR CREDENTIALS ]"
+StatusLabel.TextColor3 = Color3.fromRGB(120, 135, 160)
+StatusLabel.TextSize = 11
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = MainFrame
 
-local BoxStroke = Instance.new("UIStroke")
-BoxStroke.Color = Color3.fromRGB(55, 55, 68)
-BoxStroke.Thickness = 1
-BoxStroke.Parent = TextBox
-
--- Submit Button
+--------------------------------------------------------------------------------
+-- INTERACTIVE BUTTONS (VERIFY & GET KEY)
+--------------------------------------------------------------------------------
 local SubmitBtn = Instance.new("TextButton")
-SubmitBtn.Size = UDim2.new(0, 152, 0, 38)
-SubmitBtn.Position = UDim2.new(0, 20, 0, 145)
-SubmitBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242) -- Modern accent color
-SubmitBtn.Text = "Check Key"
-SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitBtn.TextSize = 14
-SubmitBtn.Font = Enum.Font.GothamBold
+SubmitBtn.Size = UDim2.new(0, 178, 0, 42)
+SubmitBtn.Position = UDim2.new(0, 25, 0, 182)
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 229, 255)
+SubmitBtn.Text = "AUTHORIZE"
+SubmitBtn.TextColor3 = Color3.fromRGB(10, 12, 16)
+SubmitBtn.TextSize = 13
+SubmitBtn.Font = Enum.Font.Code
 SubmitBtn.Parent = MainFrame
 
 local SubmitCorner = Instance.new("UICorner")
 SubmitCorner.CornerRadius = UDim.new(0, 8)
 SubmitCorner.Parent = SubmitBtn
 
--- Get Key Button
 local GetKeyBtn = Instance.new("TextButton")
-GetKeyBtn.Size = UDim2.new(0, 152, 0, 38)
-GetKeyBtn.Position = UDim2.new(0, 188, 0, 145)
-GetKeyBtn.BackgroundColor3 = Color3.fromRGB(36, 36, 44)
-GetKeyBtn.Text = "Get Key"
-GetKeyBtn.TextColor3 = Color3.fromRGB(200, 200, 220)
-GetKeyBtn.TextSize = 14
-GetKeyBtn.Font = Enum.Font.GothamBold
+GetKeyBtn.Size = UDim2.new(0, 178, 0, 42)
+GetKeyBtn.Position = UDim2.new(0, 217, 0, 182)
+GetKeyBtn.BackgroundColor3 = Color3.fromRGB(24, 28, 38)
+GetKeyBtn.Text = "ACQUIRE KEY"
+GetKeyBtn.TextColor3 = Color3.fromRGB(200, 210, 230)
+GetKeyBtn.TextSize = 13
+GetKeyBtn.Font = Enum.Font.Code
 GetKeyBtn.Parent = MainFrame
 
 local GetKeyCorner = Instance.new("UICorner")
 GetKeyCorner.CornerRadius = UDim.new(0, 8)
 GetKeyCorner.Parent = GetKeyBtn
 
+local GetKeyStroke = Instance.new("UIStroke")
+GetKeyStroke.Color = Color3.fromRGB(50, 60, 80)
+GetKeyStroke.Thickness = 1
+GetKeyStroke.Parent = GetKeyBtn
+
 --------------------------------------------------------------------------------
--- LOAD MAIN MENU FUNCTION
+-- HOVER & INTERACTION EFFECTS (MICRO-ANIMATIONS)
+--------------------------------------------------------------------------------
+TextBox.Focused:Connect(function()
+    TweenService:Create(InputStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(0, 229, 255)}):Play()
+end)
+
+TextBox.FocusLost:Connect(function()
+    TweenService:Create(InputStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(40, 45, 60)}):Play()
+end)
+
+SubmitBtn.MouseEnter:Connect(function()
+    TweenService:Create(SubmitBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 240, 255)}):Play()
+end)
+SubmitBtn.MouseLeave:Connect(function()
+    TweenService:Create(SubmitBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 229, 255)}):Play()
+end)
+
+GetKeyBtn.MouseEnter:Connect(function()
+    TweenService:Create(GetKeyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(34, 40, 54)}):Play()
+end)
+GetKeyBtn.MouseLeave:Connect(function()
+    TweenService:Create(GetKeyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(24, 28, 38)}):Play()
+end)
+
+--------------------------------------------------------------------------------
+-- EXECUTION LOGIC
 --------------------------------------------------------------------------------
 local function LoadMainUI()
+    -- Smooth exit fade animation
+    local fadeOut = TweenService:Create(MainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+    fadeOut:Play()
+    fadeOut.Completed:Wait()
     ScreenGui:Destroy()
 
+    -- Load your main external menu script
     local success, err = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Paradisefreedom/Steal-a-Egg/refs/heads/main/Keymium"))()
     end)
@@ -121,32 +197,37 @@ local function LoadMainUI()
     end
 end
 
---------------------------------------------------------------------------------
--- BUTTON INTERACTIONS
---------------------------------------------------------------------------------
 SubmitBtn.MouseButton1Click:Connect(function()
     if TextBox.Text == CORRECT_KEY then
-        SubmitBtn.Text = "Success!"
-        task.wait(0.5)
+        StatusLabel.Text = "[ STATUS: ACCESS GRANTED - LOADING... ]"
+        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+        UIStroke.Color = Color3.fromRGB(0, 255, 128)
+        TopBar.BackgroundColor3 = Color3.fromRGB(0, 255, 128)
+        task.wait(0.6)
         LoadMainUI()
     else
-        SubmitBtn.Text = "Invalid Key"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+        StatusLabel.Text = "[ STATUS: ERROR - INVALID CREDENTIALS ]"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 90)
+        UIStroke.Color = Color3.fromRGB(255, 60, 90)
+        
         task.wait(1.5)
-        SubmitBtn.Text = "Check Key"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+        
+        StatusLabel.Text = "[ STATUS: WAITING FOR CREDENTIALS ]"
+        StatusLabel.TextColor3 = Color3.fromRGB(120, 135, 160)
+        UIStroke.Color = Color3.fromRGB(0, 229, 255)
     end
 end)
 
 GetKeyBtn.MouseButton1Click:Connect(function()
     if setclipboard then
         setclipboard(GET_KEY_URL)
-        GetKeyBtn.Text = "Copied Link!"
-        task.wait(1.5)
-        GetKeyBtn.Text = "Get Key"
+        StatusLabel.Text = "[ STATUS: LINK COPIED TO CLIPBOARD ]"
+        StatusLabel.TextColor3 = Color3.fromRGB(0, 229, 255)
+        task.wait(2)
+        StatusLabel.Text = "[ STATUS: WAITING FOR CREDENTIALS ]"
+        StatusLabel.TextColor3 = Color3.fromRGB(120, 135, 160)
     else
-        GetKeyBtn.Text = "Executor Unsupported"
-        task.wait(1.5)
-        GetKeyBtn.Text = "Get Key"
+        StatusLabel.Text = "[ STATUS: ERROR - EXECUTOR UNSUPPORTED ]"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 90)
     end
 end)
