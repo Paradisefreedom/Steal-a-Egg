@@ -20,3 +20,45 @@ local RightGroupbox = MainTab:AddRightGroupbox("Information")
 local Tabbox = MainTab:AddLeftTabbox("Settings")
 local Tab1 = Tabbox:AddTab("General")
 local Tab2 = Tabbox:AddTab("Advanced")
+
+-- AUTO FARM EGG FUNCTION
+local function autoFarmEggs()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local egg = workspace.Egg
+    
+    if egg then
+        local targetPosition = egg:GetPivot().Position
+        print("Egg position: ", targetPosition)
+        
+        -- Make the character hover/fly to the egg
+        humanoid:MoveTo(targetPosition)
+        
+        -- Optional: Set the humanoid to flying state for better movement
+        if humanoid:GetState() ~= Enum.HumanoidStateType.Flying then
+            humanoid:ChangeState(Enum.HumanoidStateType.Flying)
+        end
+        
+        -- Wait until character reaches the destination
+        repeat
+            task.wait()
+            humanoid:MoveTo(targetPosition)
+        until (character.HumanoidRootPart.Position - targetPosition).Magnitude < 5
+    else
+        print("Egg not found in workspace")
+    end
+end
+
+-- ADD BUTTON TO GENERAL TAB
+Tab1:AddButton({
+    Name = "Auto Farm Eggs",
+    Callback = function()
+        autoFarmEggs()
+    end
+})
+
+-- Information tab content
+RightGroupbox:AddLabel("ShinyLeak v1.0.0")
+RightGroupbox:AddLabel("Made with ❤️")
+RightGroupbox:AddLabel("Auto Farm Eggs - Click the button in General tab")
