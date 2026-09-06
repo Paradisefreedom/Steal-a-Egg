@@ -18,8 +18,8 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Main Futuristic Window
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 420, 0, 260)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -130)
+MainFrame.Size = UDim2.new(0, 420, 0, 310)  -- Increased height for new button
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -155)
 MainFrame.BackgroundColor3 = Color3.fromRGB(13, 15, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
@@ -117,7 +117,7 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatusLabel.Parent = MainFrame
 
 --------------------------------------------------------------------------------
--- INTERACTIVE BUTTONS (VERIFY & GET KEY)
+-- INTERACTIVE BUTTONS (VERIFY & GET KEY & FREE)
 --------------------------------------------------------------------------------
 local SubmitBtn = Instance.new("TextButton")
 SubmitBtn.Size = UDim2.new(0, 178, 0, 42)
@@ -152,6 +152,27 @@ GetKeyStroke.Color = Color3.fromRGB(50, 60, 80)
 GetKeyStroke.Thickness = 1
 GetKeyStroke.Parent = GetKeyBtn
 
+-- FREE Button (New Addition)
+local FreeBtn = Instance.new("TextButton")
+FreeBtn.Size = UDim2.new(1, -50, 0, 38)
+FreeBtn.Position = UDim2.new(0, 25, 0, 237)
+FreeBtn.BackgroundColor3 = Color3.fromRGB(20, 24, 34)
+FreeBtn.Text = "FREE ACCESS (LIMITED)"
+FreeBtn.TextColor3 = Color3.fromRGB(255, 180, 50)
+FreeBtn.TextSize = 12
+FreeBtn.Font = Enum.Font.Code
+FreeBtn.Parent = MainFrame
+
+local FreeCorner = Instance.new("UICorner")
+FreeCorner.CornerRadius = UDim.new(0, 8)
+FreeCorner.Parent = FreeBtn
+
+local FreeStroke = Instance.new("UIStroke")
+FreeStroke.Color = Color3.fromRGB(255, 180, 50)
+FreeStroke.Transparency = 0.6
+FreeStroke.Thickness = 1
+FreeStroke.Parent = FreeBtn
+
 --------------------------------------------------------------------------------
 -- HOVER & INTERACTION EFFECTS (MICRO-ANIMATIONS)
 --------------------------------------------------------------------------------
@@ -177,6 +198,13 @@ GetKeyBtn.MouseLeave:Connect(function()
     TweenService:Create(GetKeyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(24, 28, 38)}):Play()
 end)
 
+FreeBtn.MouseEnter:Connect(function()
+    TweenService:Create(FreeBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(30, 36, 48)}):Play()
+end)
+FreeBtn.MouseLeave:Connect(function()
+    TweenService:Create(FreeBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 24, 34)}):Play()
+end)
+
 --------------------------------------------------------------------------------
 -- EXECUTION LOGIC
 --------------------------------------------------------------------------------
@@ -197,6 +225,23 @@ local function LoadMainUI()
     end
 end
 
+local function LoadFreeUI()
+    -- Smooth exit fade animation
+    local fadeOut = TweenService:Create(MainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+    fadeOut:Play()
+    fadeOut.Completed:Wait()
+    ScreenGui:Destroy()
+
+    -- Load the free version script
+    local success, err = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Paradisefreedom/Steal-a-Egg/refs/heads/main/Freemium"))()
+    end)
+
+    if not success then
+        warn("Failed to load free script: " .. tostring(err))
+    end
+end
+
 SubmitBtn.MouseButton1Click:Connect(function()
     if TextBox.Text == CORRECT_KEY then
         StatusLabel.Text = "[ STATUS: ACCESS GRANTED - LOADING... ]"
@@ -209,9 +254,7 @@ SubmitBtn.MouseButton1Click:Connect(function()
         StatusLabel.Text = "[ STATUS: ERROR - INVALID CREDENTIALS ]"
         StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 90)
         UIStroke.Color = Color3.fromRGB(255, 60, 90)
-        
         task.wait(1.5)
-        
         StatusLabel.Text = "[ STATUS: WAITING FOR CREDENTIALS ]"
         StatusLabel.TextColor3 = Color3.fromRGB(120, 135, 160)
         UIStroke.Color = Color3.fromRGB(0, 229, 255)
@@ -232,61 +275,12 @@ GetKeyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- FREE BUTTON
-local FreeBtn = Instance.new("TextButton")
-FreeBtn.Size = UDim2.new(0, 178, 0, 42)
-FreeBtn.Position = UDim2.new(0, 25, 0, 230)
-FreeBtn.BackgroundColor3 = Color3.fromRGB(24, 28, 38)
-FreeBtn.Text = "FREE"
-FreeBtn.TextColor3 = Color3.fromRGB(200, 210, 230)
-FreeBtn.TextSize = 13
-FreeBtn.Font = Enum.Font.Code
-FreeBtn.Parent = MainFrame
-
-local FreeCorner = Instance.new("UICorner")
-FreeCorner.CornerRadius = UDim.new(0, 8)
-FreeCorner.Parent = FreeBtn
-
-local FreeStroke = Instance.new("UIStroke")
-FreeStroke.Color = Color3.fromRGB(50, 60, 80)
-FreeStroke.Thickness = 1
-FreeStroke.Parent = FreeBtn
-
-FreeBtn.MouseEnter:Connect(function()
-    TweenService:Create(
-        FreeBtn,
-        TweenInfo.new(0.2),
-        {BackgroundColor3 = Color3.fromRGB(34, 40, 54)}
-    ):Play()
-end)
-
-FreeBtn.MouseLeave:Connect(function()
-    TweenService:Create(
-        FreeBtn,
-        TweenInfo.new(0.2),
-        {BackgroundColor3 = Color3.fromRGB(24, 28, 38)}
-    ):Play()
-end)
-
+-- FREE Button Click Handler (New Addition)
 FreeBtn.MouseButton1Click:Connect(function()
     StatusLabel.Text = "[ STATUS: LOADING FREE VERSION... ]"
-    StatusLabel.TextColor3 = Color3.fromRGB(0, 229, 255)
-
-    local success, err = pcall(function()
-        loadstring(game:HttpGet(
-            "https://raw.githubusercontent.com/Paradisefreedom/Steal-a-Egg/refs/heads/main/Freemium"
-        ))()
-    end)
-
-    if success then
-        StatusLabel.Text = "[ STATUS: FREE VERSION LOADED ]"
-        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
-
-        task.wait(0.5)
-        ScreenGui:Destroy()
-    else
-        StatusLabel.Text = "[ STATUS: LOAD ERROR ]"
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 90)
-        warn("Failed to load Freemium: " .. tostring(err))
-    end
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 180, 50)
+    UIStroke.Color = Color3.fromRGB(255, 180, 50)
+    TopBar.BackgroundColor3 = Color3.fromRGB(255, 180, 50)
+    task.wait(0.6)
+    LoadFreeUI()
 end)
