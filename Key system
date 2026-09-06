@@ -1,0 +1,93 @@
+-- SERVICES
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local player = Players.LocalPlayer
+
+-- SET YOUR CORRECT KEY HERE
+local CORRECT_KEY = "rqjk561!"
+
+--------------------------------------------------------------------------------
+-- STEP 1: CREATE THE KEY SYSTEM GUI
+--------------------------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "KeySystemGui"
+ScreenGui.Parent = CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 180)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -90)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.Text = "Enter Key to Continue"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = MainFrame
+
+local TextBox = Instance.new("TextBox")
+TextBox.Size = UDim2.new(0, 260, 0, 40)
+TextBox.Position = UDim2.new(0.5, -130, 0, 50)
+TextBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+TextBox.PlaceholderText = "Paste your key here..."
+TextBox.Text = ""
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.TextSize = 14
+TextBox.Font = Enum.Font.SourceSans
+TextBox.Parent = MainFrame
+
+local BoxCorner = Instance.new("UICorner")
+BoxCorner.CornerRadius = UDim.new(0, 6)
+BoxCorner.Parent = TextBox
+
+local SubmitBtn = Instance.new("TextButton")
+SubmitBtn.Size = UDim2.new(0, 260, 0, 40)
+SubmitBtn.Position = UDim2.new(0.5, -130, 0, 110)
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+SubmitBtn.Text = "Submit Key"
+SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitBtn.TextSize = 15
+SubmitBtn.Font = Enum.Font.SourceSansBold
+SubmitBtn.Parent = MainFrame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = SubmitBtn
+
+--------------------------------------------------------------------------------
+-- STEP 2: LOAD YOUR MAIN SCRIPT URL UPON SUCCESS
+--------------------------------------------------------------------------------
+local function LoadMainUI()
+    -- Remove the key GUI screen
+    ScreenGui:Destroy()
+
+    -- Load your main menu script from GitHub
+    local success, err = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Paradisefreedom/Steal-a-Egg/refs/heads/main/Keymium"))()
+    end)
+
+    if not success then
+        warn("Failed to load main script: " .. tostring(err))
+    end
+end
+
+--------------------------------------------------------------------------------
+-- STEP 3: BUTTON CLICK EVENT
+--------------------------------------------------------------------------------
+SubmitBtn.MouseButton1Click:Connect(function()
+    if TextBox.Text == CORRECT_KEY then
+        LoadMainUI()
+    else
+        SubmitBtn.Text = "Incorrect Key! Try Again."
+        task.wait(1.5)
+        SubmitBtn.Text = "Submit Key"
+    end
+end)
