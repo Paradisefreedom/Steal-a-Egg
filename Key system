@@ -232,7 +232,7 @@ GetKeyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- FREE ACCESS BUTTON
+-- FREE BUTTON
 local FreeBtn = Instance.new("TextButton")
 FreeBtn.Size = UDim2.new(0, 178, 0, 42)
 FreeBtn.Position = UDim2.new(0, 25, 0, 230)
@@ -252,7 +252,41 @@ FreeStroke.Color = Color3.fromRGB(50, 60, 80)
 FreeStroke.Thickness = 1
 FreeStroke.Parent = FreeBtn
 
+FreeBtn.MouseEnter:Connect(function()
+    TweenService:Create(
+        FreeBtn,
+        TweenInfo.new(0.2),
+        {BackgroundColor3 = Color3.fromRGB(34, 40, 54)}
+    ):Play()
+end)
+
+FreeBtn.MouseLeave:Connect(function()
+    TweenService:Create(
+        FreeBtn,
+        TweenInfo.new(0.2),
+        {BackgroundColor3 = Color3.fromRGB(24, 28, 38)}
+    ):Play()
+end)
+
 FreeBtn.MouseButton1Click:Connect(function()
-    -- Load your legitimate free-access ModuleScript here.
-    -- Example: require(game.ReplicatedStorage.FreeAccess)
+    StatusLabel.Text = "[ STATUS: LOADING FREE VERSION... ]"
+    StatusLabel.TextColor3 = Color3.fromRGB(0, 229, 255)
+
+    local success, err = pcall(function()
+        loadstring(game:HttpGet(
+            "https://raw.githubusercontent.com/Paradisefreedom/Steal-a-Egg/refs/heads/main/Freemium"
+        ))()
+    end)
+
+    if success then
+        StatusLabel.Text = "[ STATUS: FREE VERSION LOADED ]"
+        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+
+        task.wait(0.5)
+        ScreenGui:Destroy()
+    else
+        StatusLabel.Text = "[ STATUS: LOAD ERROR ]"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 90)
+        warn("Failed to load Freemium: " .. tostring(err))
+    end
 end)
