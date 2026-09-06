@@ -3,73 +3,115 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
 
--- SET YOUR CORRECT KEY HERE
-local CORRECT_KEY = "rqjk561!"
+-- CONFIGURATION
+local CORRECT_KEY = "MY_SECRET_KEY_123"
+local GET_KEY_URL = "https://your-key-link-here.com" -- Put your Linkvertise/Loot-Link here
 
 --------------------------------------------------------------------------------
--- STEP 1: CREATE THE KEY SYSTEM GUI
+-- UPGRADED MODERN KEY SYSTEM GUI
 --------------------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KeySystemGui"
+ScreenGui.Name = "ModernKeySystem"
 ScreenGui.Parent = CoreGui
 
+-- Main Container Window
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 180)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -90)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Size = UDim2.new(0, 360, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -110)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22) -- Sleek dark theme
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.CornerRadius = UDim.new(0, 10)
 UICorner.Parent = MainFrame
 
+-- Subtle border stroke for modern look
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(45, 45, 55)
+UIStroke.Thickness = 1.5
+UIStroke.Parent = MainFrame
+
+-- Title
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Size = UDim2.new(1, 0, 0, 50)
+Title.Position = UDim2.new(0, 0, 0, 10)
 Title.BackgroundTransparency = 1
-Title.Text = "Enter Key to Continue"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
-Title.Font = Enum.Font.SourceSansBold
+Title.Text = "Authentication Required"
+Title.TextColor3 = Color3.fromRGB(240, 240, 255)
+Title.TextSize = 18
+Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
+-- Subtitle description
+local SubTitle = Instance.new("TextLabel")
+SubTitle.Size = UDim2.new(1, -40, 0, 20)
+SubTitle.Position = UDim2.new(0, 20, 0, 55)
+SubTitle.BackgroundTransparency = 1
+SubTitle.Text = "Please enter your key to access the script."
+SubTitle.TextColor3 = Color3.fromRGB(150, 150, 170)
+SubTitle.TextSize = 13
+SubTitle.Font = Enum.Font.Gotham
+SubTitle.Parent = MainFrame
+
+-- Textbox (Key Input)
 local TextBox = Instance.new("TextBox")
-TextBox.Size = UDim2.new(0, 260, 0, 40)
-TextBox.Position = UDim2.new(0.5, -130, 0, 50)
-TextBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-TextBox.PlaceholderText = "Paste your key here..."
+TextBox.Size = UDim2.new(0, 320, 0, 42)
+TextBox.Position = UDim2.new(0.5, -160, 0, 85)
+TextBox.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+TextBox.PlaceholderText = "Enter key here..."
 TextBox.Text = ""
 TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 120)
 TextBox.TextSize = 14
-TextBox.Font = Enum.Font.SourceSans
+TextBox.Font = Enum.Font.Gotham
 TextBox.Parent = MainFrame
 
 local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 6)
+BoxCorner.CornerRadius = UDim.new(0, 8)
 BoxCorner.Parent = TextBox
 
+local BoxStroke = Instance.new("UIStroke")
+BoxStroke.Color = Color3.fromRGB(55, 55, 68)
+BoxStroke.Thickness = 1
+BoxStroke.Parent = TextBox
+
+-- Submit Button
 local SubmitBtn = Instance.new("TextButton")
-SubmitBtn.Size = UDim2.new(0, 260, 0, 40)
-SubmitBtn.Position = UDim2.new(0.5, -130, 0, 110)
-SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-SubmitBtn.Text = "Submit Key"
+SubmitBtn.Size = UDim2.new(0, 152, 0, 38)
+SubmitBtn.Position = UDim2.new(0, 20, 0, 145)
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242) -- Modern accent color
+SubmitBtn.Text = "Check Key"
 SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitBtn.TextSize = 15
-SubmitBtn.Font = Enum.Font.SourceSansBold
+SubmitBtn.TextSize = 14
+SubmitBtn.Font = Enum.Font.GothamBold
 SubmitBtn.Parent = MainFrame
 
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = SubmitBtn
+local SubmitCorner = Instance.new("UICorner")
+SubmitCorner.CornerRadius = UDim.new(0, 8)
+SubmitCorner.Parent = SubmitBtn
+
+-- Get Key Button
+local GetKeyBtn = Instance.new("TextButton")
+GetKeyBtn.Size = UDim2.new(0, 152, 0, 38)
+GetKeyBtn.Position = UDim2.new(0, 188, 0, 145)
+GetKeyBtn.BackgroundColor3 = Color3.fromRGB(36, 36, 44)
+GetKeyBtn.Text = "Get Key"
+GetKeyBtn.TextColor3 = Color3.fromRGB(200, 200, 220)
+GetKeyBtn.TextSize = 14
+GetKeyBtn.Font = Enum.Font.GothamBold
+GetKeyBtn.Parent = MainFrame
+
+local GetKeyCorner = Instance.new("UICorner")
+GetKeyCorner.CornerRadius = UDim.new(0, 8)
+GetKeyCorner.Parent = GetKeyBtn
 
 --------------------------------------------------------------------------------
--- STEP 2: LOAD YOUR MAIN SCRIPT URL UPON SUCCESS
+-- LOAD MAIN MENU FUNCTION
 --------------------------------------------------------------------------------
 local function LoadMainUI()
-    -- Remove the key GUI screen
     ScreenGui:Destroy()
 
-    -- Load your main menu script from GitHub
     local success, err = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Paradisefreedom/Steal-a-Egg/refs/heads/main/Keymium"))()
     end)
@@ -80,14 +122,31 @@ local function LoadMainUI()
 end
 
 --------------------------------------------------------------------------------
--- STEP 3: BUTTON CLICK EVENT
+-- BUTTON INTERACTIONS
 --------------------------------------------------------------------------------
 SubmitBtn.MouseButton1Click:Connect(function()
     if TextBox.Text == CORRECT_KEY then
+        SubmitBtn.Text = "Success!"
+        task.wait(0.5)
         LoadMainUI()
     else
-        SubmitBtn.Text = "Incorrect Key! Try Again."
+        SubmitBtn.Text = "Invalid Key"
+        SubmitBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
         task.wait(1.5)
-        SubmitBtn.Text = "Submit Key"
+        SubmitBtn.Text = "Check Key"
+        SubmitBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    end
+end)
+
+GetKeyBtn.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(GET_KEY_URL)
+        GetKeyBtn.Text = "Copied Link!"
+        task.wait(1.5)
+        GetKeyBtn.Text = "Get Key"
+    else
+        GetKeyBtn.Text = "Executor Unsupported"
+        task.wait(1.5)
+        GetKeyBtn.Text = "Get Key"
     end
 end)
