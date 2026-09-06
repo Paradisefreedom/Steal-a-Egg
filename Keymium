@@ -16,7 +16,7 @@ local MainTab = Window:AddTab("Autofarm", "home")
 local LeftGroupbox = MainTab:AddLeftGroupbox("Auto Egg")
 local RightGroupbox = MainTab:AddRightGroupbox("Auto hatch")
 local LeftGroupbox = MainTab:AddLeftGroupbox("Movements")
-
+local RightGroupbox = MainTab:AddRightGroupbox("Auto sell")
 
 -- Utitlys tab
 local MainTab = Window:AddTab("Utitly", "Utitly")
@@ -29,4 +29,7 @@ local Tabbox = MainTab:AddLeftTabbox("Locations")
 local Tab1 = Tabbox:AddTab("Island")
 local Tabbox = MainTab:AddRightTabbox("Speed")
 local Tab2 = Tabbox:AddTab("hover speed")
-local Tab2 = Tabbox:AddTab("manuel Speed")
+local Tab3 = Tabbox:AddTab("manuel Speed")
+local Tabbox = MainTab:AddRightTabbox("Auto")
+local Tab4 = Tabbox:AddTab("AutoBuy Trails")
+local Tab3 = Tabbox:AddTab("Auto")
