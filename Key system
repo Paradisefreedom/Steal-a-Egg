@@ -231,3 +231,28 @@ GetKeyBtn.MouseButton1Click:Connect(function()
         StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 90)
     end
 end)
+
+-- FREE ACCESS BUTTON
+local FreeBtn = Instance.new("TextButton")
+FreeBtn.Size = UDim2.new(0, 178, 0, 42)
+FreeBtn.Position = UDim2.new(0, 25, 0, 230)
+FreeBtn.BackgroundColor3 = Color3.fromRGB(24, 28, 38)
+FreeBtn.Text = "FREE"
+FreeBtn.TextColor3 = Color3.fromRGB(200, 210, 230)
+FreeBtn.TextSize = 13
+FreeBtn.Font = Enum.Font.Code
+FreeBtn.Parent = MainFrame
+
+local FreeCorner = Instance.new("UICorner")
+FreeCorner.CornerRadius = UDim.new(0, 8)
+FreeCorner.Parent = FreeBtn
+
+local FreeStroke = Instance.new("UIStroke")
+FreeStroke.Color = Color3.fromRGB(50, 60, 80)
+FreeStroke.Thickness = 1
+FreeStroke.Parent = FreeBtn
+
+FreeBtn.MouseButton1Click:Connect(function()
+    -- Load your legitimate free-access ModuleScript here.
+    -- Example: require(game.ReplicatedStorage.FreeAccess)
+end)
