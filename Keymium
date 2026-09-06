@@ -15,11 +15,11 @@ local Window = Library:CreateWindow({
 local MainTab = Window:AddTab("Autofarm", "home")
 local LeftGroupbox = MainTab:AddLeftGroupbox("Auto Egg")
 local RightGroupbox = MainTab:AddRightGroupbox("Auto hatch")
+local LeftGroupbox = MainTab:AddLeftGroupbox("Movements")
 
 -- TAB BOXES
-local Tabbox = MainTab:AddLeftTabbox("movement")
-local Tab1 = Tabbox:AddTab("Hover")
-local Tab2 = Tabbox:AddTab("Teleport")
-local Tabbox = MainTab:AddLeftTabbox("Rebith_Upgrade")
-local Tab3 = Tabbox:AddTab("Auto Rebirth")
-local Tab4 = Tabbox:AddTab("Auto Upgrade")
+local Tabbox = MainTab:AddLeftTabbox("Locations")
+local Tab1 = Tabbox:AddTab("Island")
+local Tabbox = MainTab:AddRightTabbox("Speed")
+local Tab2 = Tabbox:AddTab("Hover speed")
+local Tab2 = Tabbox:AddTab("Manuel Speed")
