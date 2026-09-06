@@ -15,10 +15,13 @@ local Window = Library:CreateWindow({
 local MainTab = Window:AddTab("Main", "home")
 local ESPTab = Window:AddTab("ESP", "eye")
 
--- TAB BOXES
+-- MAIN TAB - TABBOX
 local Tabbox = MainTab:AddLeftTabbox("Settings")
 local Tab1 = Tabbox:AddTab("General")
 local Tab2 = Tabbox:AddTab("Advanced")
+
+-- Add groupbox inside General tab so content is visible
+local GeneralGroupbox = Tab1:AddLeftGroupbox("Farming")
 
 -- AUTO FARM EGG FUNCTION
 local function autoFarmEggs()
@@ -49,20 +52,26 @@ local function autoFarmEggs()
     end
 end
 
--- ADD BUTTON TO GENERAL TAB
-Tab1:AddButton("Auto Farm Eggs", function()
+-- ADD BUTTON TO GENERAL TAB (inside the groupbox)
+GeneralGroupbox:AddButton("Auto Farm Eggs", function()
     autoFarmEggs()
 end)
 
 -- ESP TAB CONTENT
-local ESPLeftGroupbox = ESPTab:AddLeftGroupbox("Egg ESP")
-local ESPRightGroupbox = ESPTab:AddRightGroupbox("Settings")
+local ESPGroupbox = ESPTab:AddLeftGroupbox("Egg ESP")
 
--- ESP Function to highlight eggs
-local function enableEggESP()
+-- ESP toggle and highlight logic
+local espEnabled = false
+
+local function updateESP()
     local egg = workspace:FindFirstChild("Egg")
-    if egg then
-        -- Create highlight for the egg
+    if not egg then
+        print("Egg not found in workspace")
+        return
+    end
+    
+    if espEnabled then
+        -- Create highlight if not exists
         if not egg:FindFirstChild("ESP_Highlight") then
             local highlight = Instance.new("Highlight")
             highlight.Name = "ESP_Highlight"
@@ -72,45 +81,27 @@ local function enableEggESP()
             highlight.OutlineTransparency = 0
             highlight.Parent = egg
         end
-        print("ESP enabled for egg")
     else
-        print("Egg not found in workspace")
+        -- Remove highlight if exists
+        if egg:FindFirstChild("ESP_Highlight") then
+            egg:FindFirstChild("ESP_Highlight"):Destroy()
+        end
     end
 end
 
--- Function to disable ESP
-local function disableEggESP()
-    local egg = workspace:FindFirstChild("Egg")
-    if egg and egg:FindFirstChild("ESP_Highlight") then
-        egg:FindFirstChild("ESP_Highlight"):Destroy()
-        print("ESP disabled for egg")
-    end
-end
-
--- ESP Toggle
-ESPLeftGroupbox:AddToggle("Egg ESP", {
+ESPGroupbox:AddToggle("Enable Egg ESP", {
     Default = false,
     Callback = function(value)
-        if value then
-            enableEggESP()
-        else
-            disableEggESP()
-        end
+        espEnabled = value
+        updateESP()
     end
 })
 
-ESPLeftGroupbox:AddLabel("Shows eggs through walls")
+ESPGroupbox:AddLabel("Highlights eggs through walls")
 
--- Optional: Continuously check for new eggs
-game.Workspace.ChildAdded:Connect(function(child)
-    if child.Name == "Egg" and ESPLeftGroupbox then
-        -- Re-enable ESP if it's active
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ESP_Highlight"
-        highlight.FillColor = Color3.fromRGB(255, 255, 0)
-        highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0
-        highlight.Parent = child
+-- Also handle if egg is added later
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "Egg" and espEnabled then
+        updateESP()
     end
 end)
