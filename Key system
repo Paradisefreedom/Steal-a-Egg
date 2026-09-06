@@ -152,7 +152,7 @@ GetKeyStroke.Color = Color3.fromRGB(50, 60, 80)
 GetKeyStroke.Thickness = 1
 GetKeyStroke.Parent = GetKeyBtn
 
--- FREE Button (New Addition)
+-- FREE Button
 local FreeBtn = Instance.new("TextButton")
 FreeBtn.Size = UDim2.new(1, -50, 0, 38)
 FreeBtn.Position = UDim2.new(0, 25, 0, 237)
@@ -215,7 +215,7 @@ local function LoadMainUI()
     fadeOut.Completed:Wait()
     ScreenGui:Destroy()
 
-    -- Load your main external menu script
+    -- Load main external menu script
     local success, err = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Paradisefreedom/Steal-a-Egg/refs/heads/main/Keymium"))()
     end)
@@ -275,7 +275,7 @@ GetKeyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- FREE Button Click Handler (New Addition)
+-- FREE Button Click Handler
 FreeBtn.MouseButton1Click:Connect(function()
     StatusLabel.Text = "[ STATUS: LOADING FREE VERSION... ]"
     StatusLabel.TextColor3 = Color3.fromRGB(255, 180, 50)
