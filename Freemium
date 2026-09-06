@@ -13,6 +13,8 @@ local Window = Library:CreateWindow({
 
 -- TABS
 local MainTab = Window:AddTab("Main", "home")
+local ESPTab = Window:AddTab("ESP", "eye")
+
 local LeftGroupbox = MainTab:AddLeftGroupbox("Settings")
 local RightGroupbox = MainTab:AddRightGroupbox("Information")
 
@@ -26,7 +28,7 @@ local function autoFarmEggs()
     local player = game.Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
     local humanoid = character:WaitForChild("Humanoid")
-    local egg = workspace.Egg
+    local egg = workspace:FindFirstChild("Egg")
     
     if egg then
         local targetPosition = egg:GetPivot().Position
@@ -50,7 +52,7 @@ local function autoFarmEggs()
     end
 end
 
--- ADD BUTTON TO GENERAL TAB
+-- ADD BUTTON TO GENERAL TAB (Correct syntax from the example)
 Tab1:AddButton({
     Name = "Auto Farm Eggs",
     Callback = function()
@@ -58,7 +60,57 @@ Tab1:AddButton({
     end
 })
 
+-- ESP TAB CONTENT
+local ESPGroupbox = ESPTab:AddLeftGroupbox("Egg ESP")
+
+-- ESP Function to highlight eggs
+local function enableEggESP()
+    local egg = workspace:FindFirstChild("Egg")
+    if egg then
+        -- Create highlight for the egg
+        if not egg:FindFirstChild("ESP_Highlight") then
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "ESP_Highlight"
+            highlight.FillColor = Color3.fromRGB(255, 255, 0) -- Yellow fill
+            highlight.OutlineColor = Color3.fromRGB(255, 0, 0) -- Red outline
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0
+            highlight.Parent = egg
+        end
+        print("ESP enabled for egg")
+    else
+        print("Egg not found in workspace")
+    end
+end
+
+-- Function to disable ESP
+local function disableEggESP()
+    local egg = workspace:FindFirstChild("Egg")
+    if egg and egg:FindFirstChild("ESP_Highlight") then
+        egg:FindFirstChild("ESP_Highlight"):Destroy()
+        print("ESP disabled for egg")
+    end
+end
+
+-- ESP Toggle
+local espEnabled = false
+ESPGroupbox:AddToggle({
+    Name = "Egg ESP",
+    Default = false,
+    Callback = function(value)
+        espEnabled = value
+        if value then
+            enableEggESP()
+        else
+            disableEggESP()
+        end
+    end
+})
+
+ESPGroupbox:AddLabel("Shows eggs through walls")
+
 -- Information tab content
 RightGroupbox:AddLabel("ShinyLeak v1.0.0")
 RightGroupbox:AddLabel("Made with ❤️")
-RightGroupbox:AddLabel("Auto Farm Eggs - Click the button in General tab")
+RightGroupbox:AddLabel("Use ESP tab to see eggs")
+RightGroupbox:AddLabel("Click Auto Farm in General tab")
