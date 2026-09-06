@@ -16,6 +16,12 @@ local MainTab = Window:AddTab("Autofarm", "home")
 local LeftGroupbox = MainTab:AddLeftGroupbox("Auto Egg")
 local RightGroupbox = MainTab:AddRightGroupbox("Auto hatch")
 local LeftGroupbox = MainTab:AddLeftGroupbox("Movements")
+local Label = Groupbox:AddLabel("This is a label")
+local WrappedLabel = Groupbox:AddLabel({
+    Text = "This is a wrapped label that will break into multiple lines",
+    DoesWrap = true
+})
+
 
 -- Utitlys tab
 local MainTab = Window:AddTab("Utitly", "Utitly")
@@ -29,10 +35,3 @@ local Tab1 = Tabbox:AddTab("Island")
 local Tabbox = MainTab:AddRightTabbox("Speed")
 local Tab2 = Tabbox:AddTab("hover speed")
 local Tab2 = Tabbox:AddTab("manuel Speed")
-
--- Label
-local Label = Groupbox:AddLabel("This is a label")
-local WrappedLabel = Groupbox:AddLabel({
-    Text = "This is a wrapped label that will break into multiple lines",
-    DoesWrap = true
-})
