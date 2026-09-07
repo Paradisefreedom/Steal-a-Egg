@@ -1,35 +1,215 @@
--- SHINYLEAK ALL RIGHTS RESERVED!!
+-- Load Obsidian UI
+local Obsidian = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/source.lua"))()
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
+-- Services
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
--- WINDOWS
-local Window = Library:CreateWindow({
-    Title = "ShinyLeak",
-    Footer = "v1.0.0",
-    ToggleKeybind = Enum.KeyCode.RightControl,
-    Center = true,
-    AutoShow = true
+local LocalPlayer = Players.LocalPlayer
+
+-- Configuration & State
+local Config = {
+    Enabled = false,
+    StealthMode = true,
+    TweenSpeed = 45, -- Studs per second
+    TargetName = "Brainrot", -- What it searches for if Auto-Detect fails
+    MyBaseName = "MyBase"
+}
+
+local Cache = {
+    MyBase = nil,
+    EnemyBases = {},
+    TargetItems = {}
+}
+
+-- Create Window
+local Window = Obsidian:Load({
+    Title = "Smart Stealer [UNDETECTED]",
+    Theme = "Dark",
+    Size = Vector2.new(500, 350),
+    HideKey = Enum.KeyCode.RightShift
 })
 
--- AutoFarm Tab
-local MainTab = Window:AddTab("Autofarm", "home")
-local LeftGroupbox = MainTab:AddLeftGroupbox("Auto Egg")
-local RightGroupbox = MainTab:AddRightGroupbox("Auto hatch")
-local LeftGroupbox = MainTab:AddLeftGroupbox("Movements")
-local RightGroupbox = MainTab:AddRightGroupbox("Auto sell")
+local MainTab = Window:Tab("Main")
+local ConfigTab = Window:Tab("Config")
 
--- Utitlys tab
-local MainTab = Window:AddTab("Utitly", "Utitly")
-local LeftGroupbox = MainTab:AddLeftGroupbox("Auto hit")
-local RightGroupbox = MainTab:AddRightGroupbox("More Soon")
+-- ==========================================
+-- CORE FUNCTIONS
+-- ==========================================
 
+-- Smart Search: Attempts to find bases and items automatically
+local function ScanWorkspace()
+    table.clear(Cache.EnemyBases)
+    table.clear(Cache.TargetItems)
+    
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") or obj:IsA("Folder") then
+            -- Guessing Base locations
+            if string.match(string.lower(obj.Name), "base") or string.match(string.lower(obj.Name), "tycoon") or string.match(string.lower(obj.Name), "plot") then
+                if string.match(string.lower(obj.Name), string.lower(LocalPlayer.Name)) or obj.Name == Config.MyBaseName then
+                    Cache.MyBase = obj
+                else
+                    table.insert(Cache.EnemyBases, obj)
+                end
+            end
+        end
+        
+        -- Guessing Item locations based on user input or common names
+        if obj:IsA("BasePart") or obj:IsA("Model") then
+            if string.match(string.lower(obj.Name), string.lower(Config.TargetName)) then
+                table.insert(Cache.TargetItems, obj)
+            end
+        end
+    end
+end
 
--- TAB BOXES
-local Tabbox = MainTab:AddLeftTabbox("Locations")
-local Tab1 = Tabbox:AddTab("Island")
-local Tabbox = MainTab:AddRightTabbox("Speed")
-local Tab2 = Tabbox:AddTab("hover speed")
-local Tab3 = Tabbox:AddTab("manuel Speed")
-local Tabbox = MainTab:AddRightTabbox("Auto")
-local Tab4 = Tabbox:AddTab("AutoBuy Trails")
-local Tab3 = Tabbox:AddTab("Auto")
+-- Anti-Cheat Bypass: Smooth Tweening instead of CFrame teleporting
+local function TweenTo(targetCFrame)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return false end
+    
+    local hrp = char.HumanoidRootPart
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    local timeToTravel = distance / Config.TweenSpeed
+    
+    local tweenInfo = TweenInfo.new(timeToTravel, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    
+    -- Noclip while moving to avoid hitting walls/anti-cheat zones
+    local noclip
+    noclip = RunService.Stepped:Connect(function()
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end)
+    
+    tween:Play()
+    tween.Completed:Wait()
+    noclip:Disconnect()
+    
+    return true
+end
+
+-- Brute Force Interaction: Tries every way to pick up an item
+local function GrabItem(item)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    -- 1. Proximity Prompts (Hold E)
+    for _, prompt in pairs(item:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") then
+            fireproximityprompt(prompt)
+        end
+    end
+    
+    -- 2. Click Detectors
+    for _, click in pairs(item:GetDescendants()) do
+        if click:IsA("ClickDetector") then
+            fireclickdetector(click)
+        end
+    end
+    
+    -- 3. Touch Interests (Walking over it)
+    if item:IsA("BasePart") then
+        firetouchinterest(hrp, item, 0)
+        task.wait(0.05)
+        firetouchinterest(hrp, item, 1)
+    end
+end
+
+-- ==========================================
+-- UI SETUP
+-- ==========================================
+
+MainTab:Toggle({
+    Title = "Enable Smart Stealer",
+    Description = "Scans map, flies to items, grabs them, and returns.",
+    Default = false,
+    Callback = function(Value)
+        Config.Enabled = Value
+        
+        if Config.Enabled then
+            task.spawn(function()
+                while Config.Enabled do
+                    ScanWorkspace()
+                    
+                    if Cache.MyBase and #Cache.TargetItems > 0 then
+                        for _, item in pairs(Cache.TargetItems) do
+                            if not Config.Enabled then break end
+                            
+                            local itemCFrame = item:IsA("Model") and item:GetPivot() or item.CFrame
+                            
+                            -- Fly to item (offset above it)
+                            if TweenTo(itemCFrame * CFrame.new(0, 3, 0)) then
+                                task.wait(0.2)
+                                GrabItem(item)
+                                task.wait(0.2)
+                                
+                                -- Fly back to base
+                                local baseCFrame = Cache.MyBase:IsA("Model") and Cache.MyBase:GetPivot() or Cache.MyBase.CFrame
+                                TweenTo(baseCFrame * CFrame.new(0, 5, 0))
+                                task.wait(0.5)
+                            end
+                        end
+                    else
+                        warn("Smart Stealer: Could not find your base or the target items. Check Config tab.")
+                        task.wait(2)
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+MainTab:Toggle({
+    Title = "Ghost Mode (Client Invis)",
+    Description = "Makes you invisible on your screen so you can't be seen flying.",
+    Default = true,
+    Callback = function(Value)
+        Config.StealthMode = Value
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                    part.Transparency = Value and 1 or 0
+                end
+            end
+        end
+    end
+})
+
+ConfigTab:Slider({
+    Title = "Tween Speed",
+    Description = "How fast you fly. Lower this if you get kicked by anti-cheat.",
+    Min = 20,
+    Max = 150,
+    Default = 45,
+    Callback = function(Value)
+        Config.TweenSpeed = Value
+    end
+})
+
+-- Textboxes allow you to manually fix the script if Auto-Detect fails
+ConfigTab:Textbox({
+    Title = "Target Item Name",
+    Description = "Exact name of the item to steal in the workspace.",
+    Default = "Brainrot",
+    Callback = function(Value)
+        Config.TargetName = Value
+        ScanWorkspace()
+    end
+})
+
+ConfigTab:Textbox({
+    Title = "Your Base Name",
+    Description = "Exact name of your base in the workspace.",
+    Default = "MyBase",
+    Callback = function(Value)
+        Config.MyBaseName = Value
+        ScanWorkspace()
+    end
+})
