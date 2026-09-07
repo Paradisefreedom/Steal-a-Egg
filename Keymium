@@ -1,162 +1,87 @@
 -- Load Obsidian UI
 local Obsidian = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/source.lua"))()
 
--- Services
+-- Define Services and Player
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- Configuration & State
-local Config = {
-    Enabled = false,
-    StealthMode = true,
-    TweenSpeed = 45, -- Studs per second
-    TargetName = "Brainrot", -- What it searches for if Auto-Detect fails
-    MyBaseName = "MyBase"
-}
-
-local Cache = {
-    MyBase = nil,
-    EnemyBases = {},
-    TargetItems = {}
+-- State variables
+local _G = {
+    AutoSteal = false,
+    WaitTime = 0.5,
+    Noclip = true
 }
 
 -- Create Window
 local Window = Obsidian:Load({
-    Title = "Smart Stealer [UNDETECTED]",
+    Title = "Steal a Brainrot [AUTO]",
     Theme = "Dark",
-    Size = Vector2.new(500, 350),
+    Size = Vector2.new(450, 300),
     HideKey = Enum.KeyCode.RightShift
 })
 
-local MainTab = Window:Tab("Main")
-local ConfigTab = Window:Tab("Config")
-
--- ==========================================
--- CORE FUNCTIONS
--- ==========================================
-
--- Smart Search: Attempts to find bases and items automatically
-local function ScanWorkspace()
-    table.clear(Cache.EnemyBases)
-    table.clear(Cache.TargetItems)
-    
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") or obj:IsA("Folder") then
-            -- Guessing Base locations
-            if string.match(string.lower(obj.Name), "base") or string.match(string.lower(obj.Name), "tycoon") or string.match(string.lower(obj.Name), "plot") then
-                if string.match(string.lower(obj.Name), string.lower(LocalPlayer.Name)) or obj.Name == Config.MyBaseName then
-                    Cache.MyBase = obj
-                else
-                    table.insert(Cache.EnemyBases, obj)
-                end
-            end
-        end
-        
-        -- Guessing Item locations based on user input or common names
-        if obj:IsA("BasePart") or obj:IsA("Model") then
-            if string.match(string.lower(obj.Name), string.lower(Config.TargetName)) then
-                table.insert(Cache.TargetItems, obj)
-            end
-        end
-    end
-end
-
--- Anti-Cheat Bypass: Smooth Tweening instead of CFrame teleporting
-local function TweenTo(targetCFrame)
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return false end
-    
-    local hrp = char.HumanoidRootPart
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local timeToTravel = distance / Config.TweenSpeed
-    
-    local tweenInfo = TweenInfo.new(timeToTravel, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-    
-    -- Noclip while moving to avoid hitting walls/anti-cheat zones
-    local noclip
-    noclip = RunService.Stepped:Connect(function()
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    end)
-    
-    tween:Play()
-    tween.Completed:Wait()
-    noclip:Disconnect()
-    
-    return true
-end
-
--- Brute Force Interaction: Tries every way to pick up an item
-local function GrabItem(item)
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-
-    -- 1. Proximity Prompts (Hold E)
-    for _, prompt in pairs(item:GetDescendants()) do
-        if prompt:IsA("ProximityPrompt") then
-            fireproximityprompt(prompt)
-        end
-    end
-    
-    -- 2. Click Detectors
-    for _, click in pairs(item:GetDescendants()) do
-        if click:IsA("ClickDetector") then
-            fireclickdetector(click)
-        end
-    end
-    
-    -- 3. Touch Interests (Walking over it)
-    if item:IsA("BasePart") then
-        firetouchinterest(hrp, item, 0)
-        task.wait(0.05)
-        firetouchinterest(hrp, item, 1)
-    end
-end
-
--- ==========================================
--- UI SETUP
--- ==========================================
+local MainTab = Window:Tab("Auto Rob")
 
 MainTab:Toggle({
-    Title = "Enable Smart Stealer",
-    Description = "Scans map, flies to items, grabs them, and returns.",
+    Title = "Enable Auto Steal",
+    Description = "Teleports to all other plots and fires the Steal prompts.",
     Default = false,
     Callback = function(Value)
-        Config.Enabled = Value
+        _G.AutoSteal = Value
         
-        if Config.Enabled then
+        if _G.AutoSteal then
             task.spawn(function()
-                while Config.Enabled do
-                    ScanWorkspace()
+                while _G.AutoSteal do
+                    local char = LocalPlayer.Character
+                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    local plotsFolder = Workspace:FindFirstChild("Plots")
                     
-                    if Cache.MyBase and #Cache.TargetItems > 0 then
-                        for _, item in pairs(Cache.TargetItems) do
-                            if not Config.Enabled then break end
-                            
-                            local itemCFrame = item:IsA("Model") and item:GetPivot() or item.CFrame
-                            
-                            -- Fly to item (offset above it)
-                            if TweenTo(itemCFrame * CFrame.new(0, 3, 0)) then
-                                task.wait(0.2)
-                                GrabItem(item)
-                                task.wait(0.2)
-                                
-                                -- Fly back to base
-                                local baseCFrame = Cache.MyBase:IsA("Model") and Cache.MyBase:GetPivot() or Cache.MyBase.CFrame
-                                TweenTo(baseCFrame * CFrame.new(0, 5, 0))
-                                task.wait(0.5)
+                    if hrp and plotsFolder then
+                        
+                        -- Enable Noclip so you don't get stuck in walls while teleporting
+                        if _G.Noclip then
+                            for _, part in pairs(char:GetDescendants()) do
+                                if part:IsA("BasePart") then part.CanCollide = false end
                             end
                         end
-                    else
-                        warn("Smart Stealer: Could not find your base or the target items. Check Config tab.")
-                        task.wait(2)
+
+                        -- Loop through every player's plot
+                        for _, plot in pairs(plotsFolder:GetChildren()) do
+                            if not _G.AutoSteal then break end
+                            
+                            -- Basic check to skip your own plot (Assumes plot is named after the player or has an Owner tag)
+                            if plot.Name ~= LocalPlayer.Name then
+                                
+                                local brainrots = plot:FindFirstChild("Brainrots")
+                                if brainrots then
+                                    -- Loop through the podiums on the enemy's plot
+                                    for _, spawn in pairs(brainrots:GetChildren()) do
+                                        if not _G.AutoSteal then break end
+                                        
+                                        local podium = spawn:FindFirstChild("Podium")
+                                        if podium then
+                                            local attachment = podium:FindFirstChild("Attachment")
+                                            if attachment then
+                                                -- Find the exact ProximityPrompt the game uses for stealing
+                                                local stealPrompt = attachment:FindFirstChild("Steal") or attachment:FindFirstChildWhichIsA("ProximityPrompt")
+                                                
+                                                if stealPrompt and stealPrompt.Enabled then
+                                                    -- 1. Teleport to the podium
+                                                    hrp.CFrame = podium.CFrame * CFrame.new(0, 3, 0)
+                                                    task.wait(0.2)
+                                                    
+                                                    -- 2. Force the prompt to trigger instantly
+                                                    fireproximityprompt(stealPrompt)
+                                                    task.wait(_G.WaitTime)
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
                     end
                     task.wait(0.1)
                 end
@@ -165,51 +90,22 @@ MainTab:Toggle({
     end
 })
 
+MainTab:Slider({
+    Title = "Steal Delay (Seconds)",
+    Description = "How long to wait at the podium while stealing.",
+    Min = 0.1,
+    Max = 2.0,
+    Default = 0.5,
+    Callback = function(Value)
+        _G.WaitTime = Value
+    end
+})
+
 MainTab:Toggle({
-    Title = "Ghost Mode (Client Invis)",
-    Description = "Makes you invisible on your screen so you can't be seen flying.",
+    Title = "Auto Noclip",
+    Description = "Prevents you from getting stuck inside people's bases.",
     Default = true,
     Callback = function(Value)
-        Config.StealthMode = Value
-        local char = LocalPlayer.Character
-        if char then
-            for _, part in pairs(char:GetChildren()) do
-                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                    part.Transparency = Value and 1 or 0
-                end
-            end
-        end
-    end
-})
-
-ConfigTab:Slider({
-    Title = "Tween Speed",
-    Description = "How fast you fly. Lower this if you get kicked by anti-cheat.",
-    Min = 20,
-    Max = 150,
-    Default = 45,
-    Callback = function(Value)
-        Config.TweenSpeed = Value
-    end
-})
-
--- Textboxes allow you to manually fix the script if Auto-Detect fails
-ConfigTab:Textbox({
-    Title = "Target Item Name",
-    Description = "Exact name of the item to steal in the workspace.",
-    Default = "Brainrot",
-    Callback = function(Value)
-        Config.TargetName = Value
-        ScanWorkspace()
-    end
-})
-
-ConfigTab:Textbox({
-    Title = "Your Base Name",
-    Description = "Exact name of your base in the workspace.",
-    Default = "MyBase",
-    Callback = function(Value)
-        Config.MyBaseName = Value
-        ScanWorkspace()
+        _G.Noclip = Value
     end
 })
