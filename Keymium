@@ -1,5 +1,5 @@
--- Load Obsidian UI
-local Obsidian = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/source.lua"))()
+-- Load Rayfield UI Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- Define Services and Player
 local Players = game:GetService("Players")
@@ -15,97 +15,122 @@ local _G = {
 }
 
 -- Create Window
-local Window = Obsidian:Load({
-    Title = "Steal a Brainrot [AUTO]",
-    Theme = "Dark",
-    Size = Vector2.new(450, 300),
-    HideKey = Enum.KeyCode.RightShift
+local Window = Rayfield:CreateWindow({
+    Name = "Brainrot Stealer | UNDETECTED",
+    LoadingTitle = "Loading GUI...",
+    LoadingSubtitle = "by Smart Stealer",
+    ConfigurationSaving = {
+       Enabled = false,
+    },
+    Discord = {
+       Enabled = false,
+    },
+    KeySystem = false
 })
 
-local MainTab = Window:Tab("Auto Rob")
+-- Create Tab
+local MainTab = Window:CreateTab("Auto Rob", 4483362458) -- 4483362458 is an icon ID
 
-MainTab:Toggle({
-    Title = "Enable Auto Steal",
-    Description = "Teleports to all other plots and fires the Steal prompts.",
-    Default = false,
-    Callback = function(Value)
-        _G.AutoSteal = Value
-        
-        if _G.AutoSteal then
-            task.spawn(function()
-                while _G.AutoSteal do
-                    local char = LocalPlayer.Character
-                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                    local plotsFolder = Workspace:FindFirstChild("Plots")
+-- ==========================================
+-- MAIN LOGIC
+-- ==========================================
+
+local function StartStealing()
+    task.spawn(function()
+        while _G.AutoSteal do
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local plotsFolder = Workspace:FindFirstChild("Plots")
+            
+            if hrp and plotsFolder then
+                
+                -- Noclip Check
+                if _G.Noclip then
+                    for _, part in pairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then part.CanCollide = false end
+                    end
+                end
+
+                -- Loop through every player's plot
+                for _, plot in pairs(plotsFolder:GetChildren()) do
+                    if not _G.AutoSteal then break end
                     
-                    if hrp and plotsFolder then
+                    -- Skip your own plot
+                    if plot.Name ~= LocalPlayer.Name then
                         
-                        -- Enable Noclip so you don't get stuck in walls while teleporting
-                        if _G.Noclip then
-                            for _, part in pairs(char:GetDescendants()) do
-                                if part:IsA("BasePart") then part.CanCollide = false end
-                            end
-                        end
-
-                        -- Loop through every player's plot
-                        for _, plot in pairs(plotsFolder:GetChildren()) do
-                            if not _G.AutoSteal then break end
-                            
-                            -- Basic check to skip your own plot (Assumes plot is named after the player or has an Owner tag)
-                            if plot.Name ~= LocalPlayer.Name then
+                        local brainrots = plot:FindFirstChild("Brainrots")
+                        if brainrots then
+                            for _, spawn in pairs(brainrots:GetChildren()) do
+                                if not _G.AutoSteal then break end
                                 
-                                local brainrots = plot:FindFirstChild("Brainrots")
-                                if brainrots then
-                                    -- Loop through the podiums on the enemy's plot
-                                    for _, spawn in pairs(brainrots:GetChildren()) do
-                                        if not _G.AutoSteal then break end
+                                local podium = spawn:FindFirstChild("Podium")
+                                if podium then
+                                    local attachment = podium:FindFirstChild("Attachment")
+                                    if attachment then
+                                        -- Locate the exact Steal button
+                                        local stealPrompt = attachment:FindFirstChild("Steal") or attachment:FindFirstChildWhichIsA("ProximityPrompt")
                                         
-                                        local podium = spawn:FindFirstChild("Podium")
-                                        if podium then
-                                            local attachment = podium:FindFirstChild("Attachment")
-                                            if attachment then
-                                                -- Find the exact ProximityPrompt the game uses for stealing
-                                                local stealPrompt = attachment:FindFirstChild("Steal") or attachment:FindFirstChildWhichIsA("ProximityPrompt")
-                                                
-                                                if stealPrompt and stealPrompt.Enabled then
-                                                    -- 1. Teleport to the podium
-                                                    hrp.CFrame = podium.CFrame * CFrame.new(0, 3, 0)
-                                                    task.wait(0.2)
-                                                    
-                                                    -- 2. Force the prompt to trigger instantly
-                                                    fireproximityprompt(stealPrompt)
-                                                    task.wait(_G.WaitTime)
-                                                end
-                                            end
+                                        if stealPrompt and stealPrompt.Enabled then
+                                            -- Teleport and Steal
+                                            hrp.CFrame = podium.CFrame * CFrame.new(0, 3, 0)
+                                            task.wait(0.2) -- Let the character settle
+                                            
+                                            fireproximityprompt(stealPrompt)
+                                            task.wait(_G.WaitTime)
                                         end
                                     end
                                 end
                             end
                         end
                     end
-                    task.wait(0.1)
                 end
-            end)
+            end
+            task.wait(0.1)
         end
-    end
+    end)
+end
+
+-- ==========================================
+-- UI ELEMENTS
+-- ==========================================
+
+MainTab:CreateToggle({
+    Name = "Enable Auto Steal",
+    CurrentValue = false,
+    Flag = "AutoStealToggle",
+    Callback = function(Value)
+        _G.AutoSteal = Value
+        if _G.AutoSteal then
+            StartStealing()
+        end
+    end,
 })
 
-MainTab:Slider({
-    Title = "Steal Delay (Seconds)",
-    Description = "How long to wait at the podium while stealing.",
-    Min = 0.1,
-    Max = 2.0,
-    Default = 0.5,
+MainTab:CreateSlider({
+    Name = "Steal Delay (Seconds)",
+    Range = {0.1, 3.0},
+    Increment = 0.1,
+    Suffix = "s",
+    CurrentValue = 0.5,
+    Flag = "DelaySlider",
     Callback = function(Value)
         _G.WaitTime = Value
-    end
+    end,
 })
 
-MainTab:Toggle({
-    Title = "Auto Noclip",
-    Description = "Prevents you from getting stuck inside people's bases.",
-    Default = true,
+MainTab:CreateToggle({
+    Name = "Auto Noclip",
+    CurrentValue = true,
+    Flag = "NoclipToggle",
     Callback = function(Value)
         _G.Noclip = Value
-    end
+    end,
+})
+
+MainTab:CreateButton({
+    Name = "Destroy GUI",
+    Callback = function()
+        Rayfield:Destroy()
+        _G.AutoSteal = false
+    end,
 })
