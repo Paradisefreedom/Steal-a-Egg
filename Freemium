@@ -1,5 +1,5 @@
 -- SHINYLEAK ALL RIGHTS RESERVED!!
--- Advanced "Steal an Egg" Auto-Farm & ESP Architecture
+-- Advanced "Steal an Egg" Architecture: Auto Treadmill, Auto Farm & ESP
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -12,6 +12,7 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deivi
 
 -- STATE VARIABLES
 local getgenv = getgenv or function() return _G end
+getgenv().AutoTreadmillEnabled = false
 getgenv().AutoFarmEnabled = false
 getgenv().ESPEnabled = false
 getgenv().FlightSpeed = 100
@@ -20,12 +21,12 @@ local NoclipConnection = nil
 local EggCache = {}
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "ShinyLeak_EggESP"
-ESPFolder.Parent = CoreGui -- Parented to CoreGui to bypass anti-cheat/game deletion
+ESPFolder.Parent = CoreGui -- Parented to CoreGui to bypass game deletion
 
 -- WINDOWS & UI SETUP
 local Window = Library:CreateWindow({
     Title = "ShinyLeak | Steal An Egg",
-    Footer = "v3.0.0",
+    Footer = "v4.0.0",
     ToggleKeybind = Enum.KeyCode.RightControl,
     Center = true,
     AutoShow = true
@@ -41,18 +42,15 @@ local ESPGroupbox = ESPTab:AddLeftGroupbox("Visuals")
 
 -- CORE SYSTEMS
 
--- 1. Efficient Egg Caching System
--- Instead of searching the entire workspace every frame, we cache the eggs once every second.
+-- 1. Sync Cache Engine (Powers both ESP and Auto Farm)
 task.spawn(function()
     while task.wait(1) do
         local newCache = {}
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj.Name:lower():match("egg") then
-                -- Handle both loose parts and complex models safely
                 if obj:IsA("BasePart") then
                     table.insert(newCache, obj)
                 elseif obj:IsA("Model") then
-                    -- Find the first physical part in the model if PrimaryPart is missing
                     local physicalPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
                     if physicalPart then
                         table.insert(newCache, physicalPart)
@@ -66,21 +64,19 @@ end)
 
 -- 2. ESP Engine
 local function UpdateESP()
-    -- Clear existing highlights
     for _, child in pairs(ESPFolder:GetChildren()) do
         child:Destroy()
     end
 
     if not getgenv().ESPEnabled then return end
 
-    -- Apply new highlights (Roblox has a render limit of 31 Highlights at once)
     local count = 0
     for _, eggPart in pairs(EggCache) do
-        if count >= 30 then break end -- Prevent engine rendering bugs
+        if count >= 30 then break end -- Roblox render limit protection
         
         local highlight = Instance.new("Highlight")
         highlight.Adornee = eggPart.Parent:IsA("Model") and eggPart.Parent or eggPart
-        highlight.FillColor = Color3.fromRGB(255, 215, 0) -- Gold color
+        highlight.FillColor = Color3.fromRGB(255, 215, 0) 
         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.FillTransparency = 0.5
         highlight.OutlineTransparency = 0.1
@@ -90,14 +86,37 @@ local function UpdateESP()
     end
 end
 
--- Update ESP continuously as eggs are collected/spawned
 task.spawn(function()
     while task.wait(0.5) do
         UpdateESP()
     end
 end)
 
--- 3. Dynamic Targeting 
+-- 3. Auto Treadmill Logic
+local function GetTreadmill()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
+    local rootPart = character.HumanoidRootPart
+
+    local closestTreadmill = nil
+    local shortestDistance = math.huge
+
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj.Name:lower():match("treadmill") then
+            local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+            if targetPart then
+                local distance = (rootPart.Position - targetPart.Position).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestTreadmill = targetPart
+                end
+            end
+        end
+    end
+    return closestTreadmill
+end
+
+-- 4. Dynamic Targeting (Targeting the Highlighted Eggs)
 local function GetClosestEgg()
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -106,6 +125,7 @@ local function GetClosestEgg()
     local closestEgg = nil
     local shortestDistance = math.huge
 
+    -- Only cycles through eggs found in the Cache (the ones highlighted by ESP)
     for _, targetPart in pairs(EggCache) do
         if targetPart and targetPart.Parent then
             local distance = (rootPart.Position - targetPart.Position).Magnitude
@@ -119,7 +139,7 @@ local function GetClosestEgg()
     return closestEgg
 end
 
--- 4. Anti-Collision (Noclip)
+-- 5. Anti-Collision (Noclip)
 local function ToggleNoclip(state)
     if state then
         if not NoclipConnection then
@@ -142,7 +162,7 @@ local function ToggleNoclip(state)
     end
 end
 
--- 5. Tween Flight Logic
+-- 6. Tween Flight Logic
 local function FlyToTarget(targetPart)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
@@ -152,9 +172,7 @@ local function FlyToTarget(targetPart)
     
     if humanoid and humanoid.Health <= 0 then return end
 
-    -- Anchor character during flight to prevent physics glitching/gravity interference
     rootPart.Anchored = true 
-
     local distance = (rootPart.Position - targetPart.Position).Magnitude
     local timeToReach = distance / getgenv().FlightSpeed
 
@@ -164,10 +182,8 @@ local function FlyToTarget(targetPart)
     flightTween:Play()
     flightTween.Completed:Wait()
     
-    -- Unanchor upon arrival so Touch events register natively
     rootPart.Anchored = false 
 
-    -- Exploit-level touch enforcement
     if targetPart and rootPart and firetouchinterest then
         firetouchinterest(rootPart, targetPart, 0)
         task.wait(0.05)
@@ -177,10 +193,34 @@ end
 
 -- UI INTEGRATION
 
-LeftGroupbox:AddToggle('AutoFarmToggle', {
-    Text = 'Enable Auto Farm',
+LeftGroupbox:AddToggle('AutoTreadmillToggle', {
+    Text = 'Auto Treadmill',
     Default = false,
-    Tooltip = 'Continuously searches for and flies to the closest egg.',
+    Tooltip = 'Teleports you to the nearest treadmill and anchors you on it to farm speed.',
+    Callback = function(Value)
+        getgenv().AutoTreadmillEnabled = Value
+        if Value then
+            task.spawn(function()
+                while getgenv().AutoTreadmillEnabled do
+                    local treadmill = GetTreadmill()
+                    local char = LocalPlayer.Character
+                    if treadmill and char and char:FindFirstChild("HumanoidRootPart") then
+                        -- Teleport slightly above the treadmill so you land on it correctly
+                        char.HumanoidRootPart.CFrame = treadmill.CFrame + Vector3.new(0, 3, 0)
+                        task.wait(0.5)
+                    else
+                        task.wait(1)
+                    end
+                end
+            end)
+        end
+    end
+})
+
+LeftGroupbox:AddToggle('AutoFarmToggle', {
+    Text = 'Auto Farm Eggs',
+    Default = false,
+    Tooltip = 'Flies directly to the closest egg highlighted by your ESP.',
     Callback = function(Value)
         getgenv().AutoFarmEnabled = Value
         ToggleNoclip(Value) 
