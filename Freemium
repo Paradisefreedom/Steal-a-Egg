@@ -1,10 +1,11 @@
 -- SHINYLEAK ALL RIGHTS RESERVED!!
--- Advanced "Steal an Egg" Auto-Farm Architecture
+-- Advanced "Steal an Egg" Auto-Farm & ESP Architecture
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
@@ -12,27 +13,91 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deivi
 -- STATE VARIABLES
 local getgenv = getgenv or function() return _G end
 getgenv().AutoFarmEnabled = false
+getgenv().ESPEnabled = false
 getgenv().FlightSpeed = 100
+
 local NoclipConnection = nil
+local EggCache = {}
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "ShinyLeak_EggESP"
+ESPFolder.Parent = CoreGui -- Parented to CoreGui to bypass anti-cheat/game deletion
 
 -- WINDOWS & UI SETUP
 local Window = Library:CreateWindow({
     Title = "ShinyLeak | Steal An Egg",
-    Footer = "v2.0.0 - Advanced Edition",
+    Footer = "v3.0.0",
     ToggleKeybind = Enum.KeyCode.RightControl,
     Center = true,
     AutoShow = true
 })
 
+-- TABS
 local MainTab = Window:AddTab("Main", "home")
 local LeftGroupbox = MainTab:AddLeftGroupbox("Farming Systems")
 local RightGroupbox = MainTab:AddRightGroupbox("Movement Settings")
 
--- CORE FUNCTIONS
+local ESPTab = Window:AddTab("ESP", "eye")
+local ESPGroupbox = ESPTab:AddLeftGroupbox("Visuals")
 
--- 1. Dynamic Egg Targeting System
--- In "Steal an egg", eggs can be nested in folders, models, or spawned dynamically. 
--- This function calculates the absolute closest egg to your character to optimize travel time.
+-- CORE SYSTEMS
+
+-- 1. Efficient Egg Caching System
+-- Instead of searching the entire workspace every frame, we cache the eggs once every second.
+task.spawn(function()
+    while task.wait(1) do
+        local newCache = {}
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj.Name:lower():match("egg") then
+                -- Handle both loose parts and complex models safely
+                if obj:IsA("BasePart") then
+                    table.insert(newCache, obj)
+                elseif obj:IsA("Model") then
+                    -- Find the first physical part in the model if PrimaryPart is missing
+                    local physicalPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                    if physicalPart then
+                        table.insert(newCache, physicalPart)
+                    end
+                end
+            end
+        end
+        EggCache = newCache
+    end
+end)
+
+-- 2. ESP Engine
+local function UpdateESP()
+    -- Clear existing highlights
+    for _, child in pairs(ESPFolder:GetChildren()) do
+        child:Destroy()
+    end
+
+    if not getgenv().ESPEnabled then return end
+
+    -- Apply new highlights (Roblox has a render limit of 31 Highlights at once)
+    local count = 0
+    for _, eggPart in pairs(EggCache) do
+        if count >= 30 then break end -- Prevent engine rendering bugs
+        
+        local highlight = Instance.new("Highlight")
+        highlight.Adornee = eggPart.Parent:IsA("Model") and eggPart.Parent or eggPart
+        highlight.FillColor = Color3.fromRGB(255, 215, 0) -- Gold color
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0.1
+        highlight.Parent = ESPFolder
+        
+        count = count + 1
+    end
+end
+
+-- Update ESP continuously as eggs are collected/spawned
+task.spawn(function()
+    while task.wait(0.5) do
+        UpdateESP()
+    end
+end)
+
+-- 3. Dynamic Targeting 
 local function GetClosestEgg()
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -41,29 +106,12 @@ local function GetClosestEgg()
     local closestEgg = nil
     local shortestDistance = math.huge
 
-    -- Broad search: iterates through workspace to find any BasePart or Model named "Egg"
-    -- If the game uses a specific folder (e.g., workspace.Eggs), it will still find it.
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj.Name:lower():match("egg") then
-            -- Determine the position regardless of whether it's a Model or a Part
-            local targetPos = nil
-            local targetPart = nil
-
-            if obj:IsA("Model") and obj.PrimaryPart then
-                targetPos = obj:GetPivot().Position
-                targetPart = obj.PrimaryPart
-            elseif obj:IsA("BasePart") then
-                targetPos = obj.Position
-                targetPart = obj
-            end
-
-            -- Validate and calculate distance
-            if targetPos and targetPart then
-                local distance = (rootPart.Position - targetPos).Magnitude
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    closestEgg = targetPart
-                end
+    for _, targetPart in pairs(EggCache) do
+        if targetPart and targetPart.Parent then
+            local distance = (rootPart.Position - targetPart.Position).Magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                closestEgg = targetPart
             end
         end
     end
@@ -71,8 +119,7 @@ local function GetClosestEgg()
     return closestEgg
 end
 
--- 2. Anti-Collision (Noclip) Engine
--- Prevents your character from getting stuck on walls, terrain, or buildings while flying.
+-- 4. Anti-Collision (Noclip)
 local function ToggleNoclip(state)
     if state then
         if not NoclipConnection then
@@ -95,7 +142,7 @@ local function ToggleNoclip(state)
     end
 end
 
--- 3. Tween Flight Logic & Touch Bypass
+-- 5. Tween Flight Logic
 local function FlyToTarget(targetPart)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
@@ -103,8 +150,10 @@ local function FlyToTarget(targetPart)
     local rootPart = character.HumanoidRootPart
     local humanoid = character:FindFirstChild("Humanoid")
     
-    -- Suspend gravity effects so the character doesn't glitch during flight
-    if humanoid then humanoid.PlatformStand = true end
+    if humanoid and humanoid.Health <= 0 then return end
+
+    -- Anchor character during flight to prevent physics glitching/gravity interference
+    rootPart.Anchored = true 
 
     local distance = (rootPart.Position - targetPart.Position).Magnitude
     local timeToReach = distance / getgenv().FlightSpeed
@@ -114,17 +163,16 @@ local function FlyToTarget(targetPart)
     
     flightTween:Play()
     flightTween.Completed:Wait()
-
-    -- Failsafe: Force a physical touch event on the server to ensure the egg is collected
-    if targetPart and rootPart then
-        if firetouchinterest then
-            firetouchinterest(rootPart, targetPart, 0)
-            task.wait(0.1)
-            firetouchinterest(rootPart, targetPart, 1)
-        end
-    end
     
-    if humanoid then humanoid.PlatformStand = false end
+    -- Unanchor upon arrival so Touch events register natively
+    rootPart.Anchored = false 
+
+    -- Exploit-level touch enforcement
+    if targetPart and rootPart and firetouchinterest then
+        firetouchinterest(rootPart, targetPart, 0)
+        task.wait(0.05)
+        firetouchinterest(rootPart, targetPart, 1)
+    end
 end
 
 -- UI INTEGRATION
@@ -135,20 +183,18 @@ LeftGroupbox:AddToggle('AutoFarmToggle', {
     Tooltip = 'Continuously searches for and flies to the closest egg.',
     Callback = function(Value)
         getgenv().AutoFarmEnabled = Value
-        ToggleNoclip(Value) -- Enable Noclip while auto farming
+        ToggleNoclip(Value) 
         
         if Value then
             task.spawn(function()
                 while getgenv().AutoFarmEnabled do
                     local targetEgg = GetClosestEgg()
-                    
                     if targetEgg then
                         FlyToTarget(targetEgg)
                     else
-                        -- Wait slightly longer if no eggs are found to reduce lag
-                        task.wait(1) 
+                        task.wait(0.5) 
                     end
-                    task.wait(0.1) -- Small buffer to prevent crashing
+                    task.wait(0.1) 
                 end
             end)
         end
@@ -159,10 +205,20 @@ RightGroupbox:AddSlider('FlightSpeedSlider', {
     Text = 'Flight Speed',
     Default = 100,
     Min = 50,
-    Max = 300,
+    Max = 350,
     Rounding = 0,
     Compact = false,
     Callback = function(Value)
         getgenv().FlightSpeed = Value
+    end
+})
+
+ESPGroupbox:AddToggle('ESPToggle', {
+    Text = 'Egg Highlight ESP',
+    Default = false,
+    Tooltip = 'Highlights up to 30 of the closest eggs on your screen.',
+    Callback = function(Value)
+        getgenv().ESPEnabled = Value
+        UpdateESP()
     end
 })
