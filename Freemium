@@ -1,5 +1,5 @@
 -- SHINYLEAK ALL RIGHTS RESERVED!!
--- Advanced "Steal an Egg" Architecture v10.0.0 (Pure Frame-by-Frame Glide Edition)
+-- Advanced "Steal an Egg" Architecture v11.0.0 (Area Selection & Full Steal/Drop Loop)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -20,9 +20,11 @@ getgenv().AutoUpgradeEnabled = false
 getgenv().AutoClaimEnabled = false
 getgenv().ESPEnabled = false
 getgenv().FlightSpeed = 100
+getgenv().SelectedArea = "All"
 
 local NoclipConnection = nil
 local EggCache = {}
+local DiscoveredAreas = {"All"}
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "ShinyLeak_EggESP"
 ESPFolder.Parent = CoreGui 
@@ -32,7 +34,7 @@ ESPFolder.Parent = CoreGui
 -- ==========================================
 local Window = Library:CreateWindow({
     Title = "ShinyLeak | Steal An Egg",
-    Footer = "v10.0.0 - PURE GLIDE EDITION",
+    Footer = "v1.0.0",
     ToggleKeybind = Enum.KeyCode.RightControl,
     Center = true,
     AutoShow = true
@@ -40,6 +42,7 @@ local Window = Library:CreateWindow({
 
 local MainTab = Window:AddTab("Main", "home")
 local LeftGroupbox = MainTab:AddLeftGroupbox("Farming Systems")
+local AreaGroupbox = MainTab:AddLeftGroupbox("Area Selection")
 local RightGroupbox = MainTab:AddRightGroupbox("Automation & Upgrades")
 
 local MovementTab = Window:AddTab("Movement", "navigation")
@@ -49,7 +52,7 @@ local ESPTab = Window:AddTab("Visuals", "eye")
 local ESPGroupbox = ESPTab:AddLeftGroupbox("ESP Settings")
 
 -- ==========================================
--- CORE SYSTEMS: FILTERING & CACHING
+-- CORE SYSTEMS: BASE & AREA DETECTION
 -- ==========================================
 local function IsInPlayerBase(obj)
     local ancestor = obj.Parent
@@ -63,12 +66,28 @@ local function IsInPlayerBase(obj)
     return false
 end
 
-local function GetMyTreadmill()
+-- Detects parent zone/area name for filtering
+local function GetEggArea(obj)
+    local curr = obj.Parent
+    while curr and curr ~= Workspace do
+        if curr:IsA("Folder") or curr:IsA("Model") then
+            local name = curr.Name
+            if not name:lower():match("egg") and not name:lower():match("workspace") then
+                return name
+            end
+        end
+        curr = curr.Parent
+    end
+    return "Main Map"
+end
+
+-- Finds player's base location via their local treadmill or plot
+local function GetMyBaseCFrame()
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
     local rootPart = character.HumanoidRootPart
 
-    local closest = nil
+    local closestTreadmill = nil
     local shortestDistance = math.huge
 
     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -82,32 +101,50 @@ local function GetMyTreadmill()
                 local dist = (rootPart.Position - part.Position).Magnitude
                 if dist < shortestDistance then
                     shortestDistance = dist
-                    closest = part
+                    closestTreadmill = part
                 end
             end
         end
     end
-    return closest
+
+    if closestTreadmill then
+        return closestTreadmill.CFrame * CFrame.new(0, 3, 0)
+    end
+    
+    return rootPart.CFrame -- Fallback to current location if base isn't found
 end
 
+-- Scans workspace and builds egg cache filtered by area
 task.spawn(function()
     while task.wait(1) do
         local newCache = {}
+        local areaSet = {["All"] = true}
+
         for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj.Name:lower():match("egg") then
-                if not IsInPlayerBase(obj) then
-                    if obj:IsA("BasePart") then
-                        table.insert(newCache, obj)
-                    elseif obj:IsA("Model") then
-                        local physicalPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-                        if physicalPart then
-                            table.insert(newCache, physicalPart)
-                        end
+            if obj.Name:lower():match("egg") and not IsInPlayerBase(obj) then
+                local physicalPart = nil
+                if obj:IsA("BasePart") then physicalPart = obj
+                elseif obj:IsA("Model") then physicalPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true) end
+
+                if physicalPart then
+                    local areaName = GetEggArea(physicalPart)
+                    areaSet[areaName] = true
+
+                    if getgenv().SelectedArea == "All" or areaName == getgenv().SelectedArea then
+                        table.insert(newCache, physicalPart)
                     end
                 end
             end
         end
+
         EggCache = newCache
+
+        -- Update Area List
+        local updatedAreas = {}
+        for area, _ in pairs(areaSet) do
+            table.insert(updatedAreas, area)
+        end
+        DiscoveredAreas = updatedAreas
     end
 end)
 
@@ -188,38 +225,99 @@ local function ToggleNoclip(state)
     end
 end
 
--- NEW: Pure Frame-by-Frame CFrame Glide. No Anchors. No Tweens. No BodyVelocity.
-local function FlyToTarget(targetPart)
+-- Frame-by-Frame Glide engine to position
+local function GlideTo(targetPosition)
     local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
     local rootPart = character.HumanoidRootPart
 
-    -- Glides in a straight line until we are right on top of the egg
-    while getgenv().AutoFarmEnabled and targetPart and targetPart.Parent do
-        local distance = (targetPart.Position - rootPart.Position).Magnitude
+    while getgenv().AutoFarmEnabled and targetPosition do
+        local distance = (targetPosition - rootPart.Position).Magnitude
+        if distance < 3 then break end
         
-        -- If we are close enough, grab the egg and break the loop
-        if distance < 3 then
-            if firetouchinterest then
-                firetouchinterest(rootPart, targetPart, 0)
-                task.wait(0.01)
-                firetouchinterest(rootPart, targetPart, 1)
-            end
-            break
-        end
-        
-        -- Calculate direction and how far to move this specific frame
         local deltaTime = RunService.Heartbeat:Wait()
-        local direction = (targetPart.Position - rootPart.Position).Unit
+        local direction = (targetPosition - rootPart.Position).Unit
         local step = direction * (getgenv().FlightSpeed * deltaTime)
         
-        -- Smoothly slide the player
         rootPart.CFrame = rootPart.CFrame + step
-        
-        -- Nullify physical momentum so gravity doesn't drop you and anti-cheat doesn't flag velocity
         rootPart.AssemblyLinearVelocity = Vector3.zero
         rootPart.AssemblyAngularVelocity = Vector3.zero
+    end
+    return true
+end
+
+-- Interacts with ProximityPrompt (Hold E) or touch fallback
+local function InteractHoldE(targetPart)
+    local prompt = targetPart:FindFirstChildWhichIsA("ProximityPrompt", true) 
+                   or (targetPart.Parent and targetPart.Parent:FindFirstChildWhichIsA("ProximityPrompt", true))
+
+    if prompt then
+        if fireproximityprompt then
+            fireproximityprompt(prompt, 0)
+            task.wait(prompt.HoldDuration > 0 and prompt.HoldDuration or 0.5)
+        else
+            -- Hold key fallback if executor lacks fireproximityprompt
+            if prompt.InputHoldBegin then prompt:InputHoldBegin() end
+            task.wait(prompt.HoldDuration > 0 and prompt.HoldDuration or 0.5)
+            if prompt.InputHoldEnd then prompt:InputHoldEnd() end
+        end
+    elseif firetouchinterest then
+        local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if rootPart then
+            firetouchinterest(rootPart, targetPart, 0)
+            task.wait(0.01)
+            firetouchinterest(rootPart, targetPart, 1)
+        end
+    end
+end
+
+-- Fires drop/place remotes or interacts with local plot drop zone
+local function DropEggAtPlot()
+    -- Fire common drop remotes
+    for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
+        if remote:IsA("RemoteEvent") then
+            local name = remote.Name:lower()
+            if name:match("drop") or name:match("place") or name:match("deposit") or name:match("deliver") then
+                pcall(function() remote:FireServer() end)
+            end
+        end
+    end
+
+    -- Trigger any local drop ProximityPrompts at your base
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") then
+                local parentName = obj.Parent and obj.Parent.Name:lower() or ""
+                if parentName:match("drop") or parentName:match("base") or parentName:match("deposit") or parentName:match("nest") then
+                    if fireproximityprompt then
+                        fireproximityprompt(obj, 0)
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Full Farm Routine: Glide to Egg -> Hold E -> Glide to Base -> Place Down
+local function ExecuteStealAndReturnLoop(targetEgg)
+    if not targetEgg or not targetEgg.Parent then return end
+    
+    -- 1. Glide to Egg
+    GlideTo(targetEgg.Position)
+    
+    -- 2. Pick up Egg (Hold E)
+    InteractHoldE(targetEgg)
+    task.wait(0.3)
+
+    -- 3. Glide back to base plot
+    local baseCFrame = GetMyBaseCFrame()
+    if baseCFrame then
+        GlideTo(baseCFrame.Position)
+        
+        -- 4. Drop / Place Egg
+        DropEggAtPlot()
+        task.wait(0.5)
     end
 end
 
@@ -262,10 +360,27 @@ end
 -- UI INTEGRATION & TOGGLES
 -- ==========================================
 
+AreaGroupbox:AddDropdown('AreaDropdown', {
+    Values = DiscoveredAreas,
+    Default = 1,
+    Multi = false,
+    Text = 'Target Egg Area',
+    Tooltip = 'Select which area to target eggs from.',
+    Callback = function(Value)
+        getgenv().SelectedArea = Value
+    end
+})
+
+AreaGroupbox:AddButton('Refresh Areas', function()
+    if AreaGroupbox.Options and AreaGroupbox.Options.AreaDropdown then
+        AreaGroupbox.Options.AreaDropdown:SetValues(DiscoveredAreas)
+    end
+end)
+
 LeftGroupbox:AddToggle('AutoFarmToggle', {
-    Text = 'Auto Farm Public Eggs',
+    Text = 'Auto Steal & Drop Eggs',
     Default = false,
-    Tooltip = 'Smooth frame-by-frame glide to bypass anti-cheat.',
+    Tooltip = 'Glides to egg, holds E to pick up, glides back to plot and drops it.',
     Callback = function(Value)
         getgenv().AutoFarmEnabled = Value
         ToggleNoclip(Value) 
@@ -274,9 +389,9 @@ LeftGroupbox:AddToggle('AutoFarmToggle', {
                 while getgenv().AutoFarmEnabled do
                     local targetEgg = GetClosestEgg()
                     if targetEgg then
-                        FlyToTarget(targetEgg)
+                        ExecuteStealAndReturnLoop(targetEgg)
                     else
-                        task.wait(0.1) 
+                        task.wait(0.5) 
                     end
                 end
             end)
@@ -296,10 +411,10 @@ LeftGroupbox:AddToggle('AutoTreadmillToggle', {
                     if not getgenv().AutoFarmEnabled then
                         local character = LocalPlayer.Character
                         local root = character and character:FindFirstChild("HumanoidRootPart")
-                        local myTreadmill = GetMyTreadmill()
+                        local baseCFrame = GetMyBaseCFrame()
                         
-                        if root and myTreadmill then
-                            root.CFrame = myTreadmill.CFrame * CFrame.new(0, 2.5, 0)
+                        if root and baseCFrame then
+                            root.CFrame = baseCFrame
                         end
                     end
                     task.wait(0.5) 
