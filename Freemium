@@ -1,7 +1,8 @@
 -- SHINYLEAK ALL RIGHTS RESERVED!!
--- Advanced "Steal an Egg" Architecture v7.0.0 (Terrain-Hugging Edition)
+-- Advanced "Steal an Egg" Architecture v8.0.0 (Stable BodyVelocity Edition)
 
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -32,7 +33,7 @@ ESPFolder.Parent = CoreGui
 -- ==========================================
 local Window = Library:CreateWindow({
     Title = "ShinyLeak | Steal An Egg",
-    Footer = "v7.0.0 - HOVER EDITION",
+    Footer = "v8.0.0 - STABLE EDITION",
     ToggleKeybind = Enum.KeyCode.RightControl,
     Center = true,
     AutoShow = true
@@ -61,6 +62,23 @@ local function IsInPlayerBase(obj)
         ancestor = ancestor.Parent
     end
     return false
+end
+
+-- Safely finds any treadmill, even if it's a model
+local function GetTreadmill()
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj.Name:lower():match("treadmill") then
+            if obj:IsA("BasePart") then 
+                return obj 
+            elseif obj:IsA("Model") and obj.PrimaryPart then 
+                return obj.PrimaryPart 
+            elseif obj:IsA("Model") then
+                local part = obj:FindFirstChildWhichIsA("BasePart", true)
+                if part then return part end
+            end
+        end
+    end
+    return nil
 end
 
 task.spawn(function()
@@ -117,7 +135,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- CORE SYSTEMS: TARGETING & NOCLIP
+-- CORE SYSTEMS: NOCLIP & MOVEMENT
 -- ==========================================
 local function GetClosestEgg()
     local character = LocalPlayer.Character
@@ -161,9 +179,8 @@ local function ToggleNoclip(state)
     end
 end
 
--- ==========================================
--- NEW: CUSTOM TERRAIN-HUGGING HOVER ENGINE
--- ==========================================
+-- NEW: Anti-Gravity BodyVelocity Engine
+-- Bypasses anti-cheats by not anchoring you, and glides you safely 2 studs above the ground.
 local function FlyToTarget(targetPart)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
@@ -172,61 +189,35 @@ local function FlyToTarget(targetPart)
     local humanoid = character:FindFirstChild("Humanoid")
     if humanoid and humanoid.Health <= 0 then return end
 
-    rootPart.Anchored = true 
-    
-    local startPos = rootPart.Position
-    local targetPos = targetPart.Position
-    
-    -- Calculate 2D horizontal distance only
-    local horizontalDist = (Vector3.new(targetPos.X, 0, targetPos.Z) - Vector3.new(startPos.X, 0, startPos.Z)).Magnitude
-    local timeToReach = horizontalDist / getgenv().FlightSpeed
-    local startTime = tick()
-    
-    -- Exclude player from raycasting so we don't accidentally measure our own body
-    local rayParams = RaycastParams.new()
-    rayParams.FilterDescendantsInstances = {character}
-    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    -- Create zero-gravity field so you don't fall into the void
+    local bodyVelocity = rootPart:FindFirstChild("ShinyLeak_BV")
+    if not bodyVelocity then
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Name = "ShinyLeak_BV"
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyVelocity.Velocity = Vector3.zero
+        bodyVelocity.Parent = rootPart
+    end
 
-    local flightConnection
-    flightConnection = RunService.Heartbeat:Connect(function()
-        local elapsed = tick() - startTime
-        local alpha = math.clamp(elapsed / timeToReach, 0, 1)
-        
-        -- Move smoothly on X and Z axis
-        local currentX = startPos.X + (targetPos.X - startPos.X) * alpha
-        local currentZ = startPos.Z + (targetPos.Z - startPos.Z) * alpha
-        
-        -- Raycast strictly straight down from high up to find the physical ground below us
-        local rayOrigin = Vector3.new(currentX, 1000, currentZ)
-        local rayDirection = Vector3.new(0, -2000, 0)
-        local rayResult = Workspace:Raycast(rayOrigin, rayDirection, rayParams)
-        
-        -- Default to egg height, but if ground is detected, hover 4 studs above it
-        local currentY = targetPos.Y + 3 
-        if rayResult then
-            currentY = rayResult.Position.Y + 4
-        end
-        
-        rootPart.CFrame = CFrame.new(currentX, currentY, currentZ)
-        
-        -- Stop when we reach the destination
-        if alpha >= 1 or not getgenv().AutoFarmEnabled then
-            flightConnection:Disconnect()
-        end
-    end)
+    local distance = (rootPart.Position - targetPart.Position).Magnitude
+    local timeToReach = distance / getgenv().FlightSpeed
     
-    -- Yield the script until the flight loop finishes
-    repeat task.wait() until tick() - startTime >= timeToReach or not getgenv().AutoFarmEnabled
-    
-    if flightConnection then flightConnection:Disconnect() end
-    
-    rootPart.Anchored = false 
-    rootPart.Velocity = Vector3.zero -- Prevent flinging
+    -- Target position is exactly 2 studs above the egg to prevent clipping the floor
+    local targetCFrame = CFrame.new(targetPart.Position + Vector3.new(0, 2, 0))
 
-    -- Force collection
+    local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
+    local flightTween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
+    
+    flightTween:Play()
+    flightTween.Completed:Wait()
+
+    -- Remove zero-gravity field when we arrive
+    if bodyVelocity then bodyVelocity:Destroy() end
+
+    -- Collect Egg securely
     if targetPart and rootPart and firetouchinterest and getgenv().AutoFarmEnabled then
         firetouchinterest(rootPart, targetPart, 0)
-        task.wait(0.05)
+        task.wait(0.01)
         firetouchinterest(rootPart, targetPart, 1)
     end
 end
@@ -235,21 +226,6 @@ end
 -- CORE SYSTEMS: AUTOMATION (UPGRADES & CLAIMING)
 -- ==========================================
 local function ExecuteUpgrades()
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj.Name:lower():match("upgrade") then
-            if obj:IsA("ProximityPrompt") then
-                fireproximityprompt(obj, 1)
-            elseif obj:IsA("BasePart") and firetouchinterest then
-                local char = LocalPlayer.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    firetouchinterest(char.HumanoidRootPart, obj, 0)
-                    task.wait(0.01)
-                    firetouchinterest(char.HumanoidRootPart, obj, 1)
-                end
-            end
-        end
-    end
-
     for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
         if remote:IsA("RemoteEvent") then
             local name = remote.Name:lower()
@@ -288,7 +264,7 @@ end
 LeftGroupbox:AddToggle('AutoFarmToggle', {
     Text = 'Auto Farm Public Eggs',
     Default = false,
-    Tooltip = 'Hovers 4 studs above the ground. Overrides Treadmills.',
+    Tooltip = 'Smoothly glides above the ground. Overrides Treadmills.',
     Callback = function(Value)
         getgenv().AutoFarmEnabled = Value
         ToggleNoclip(Value) 
@@ -303,6 +279,13 @@ LeftGroupbox:AddToggle('AutoFarmToggle', {
                     end
                     task.wait(0.1) 
                 end
+                
+                -- Cleanup if turned off mid-flight
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local bv = char.HumanoidRootPart:FindFirstChild("ShinyLeak_BV")
+                    if bv then bv:Destroy() end
+                end
             end)
         end
     end
@@ -311,26 +294,24 @@ LeftGroupbox:AddToggle('AutoFarmToggle', {
 LeftGroupbox:AddToggle('AutoTreadmillToggle', {
     Text = 'Auto Treadmill',
     Default = false,
-    Tooltip = 'Teleports to treadmill (Pauses automatically if Auto Farm is ON).',
+    Tooltip = 'Teleports to treadmill (Only works if Auto Farm is OFF).',
     Callback = function(Value)
         getgenv().AutoTreadmillEnabled = Value
         if Value then
             task.spawn(function()
                 while getgenv().AutoTreadmillEnabled do
-                    -- PRIORITY OVERRIDE: Do not teleport if Auto Farm Eggs is currently toggled ON
+                    -- PRIORITY SYSTEM: Will not run if Auto Farm is on!
                     if not getgenv().AutoFarmEnabled then
                         local character = LocalPlayer.Character
                         local root = character and character:FindFirstChild("HumanoidRootPart")
-                        if root then
-                            for _, obj in pairs(Workspace:GetDescendants()) do
-                                if obj.Name:lower():match("treadmill") and obj:IsA("BasePart") then
-                                    root.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
-                                    break
-                                end
-                            end
+                        local treadmill = GetTreadmill()
+                        
+                        if root and treadmill then
+                            -- Snaps you directly onto the treadmill surface
+                            root.CFrame = treadmill.CFrame * CFrame.new(0, 2.5, 0)
                         end
                     end
-                    task.wait(1)
+                    task.wait(0.5) -- Updates twice a second to keep you planted on it
                 end
             end)
         end
