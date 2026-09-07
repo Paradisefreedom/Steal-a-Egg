@@ -1,8 +1,7 @@
 -- SHINYLEAK ALL RIGHTS RESERVED!!
--- Advanced "Steal an Egg" Architecture v6.0.0 (Anti-Void & Arc-Flight Edition)
+-- Advanced "Steal an Egg" Architecture v7.0.0 (Terrain-Hugging Edition)
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -21,20 +20,19 @@ getgenv().AutoUpgradeEnabled = false
 getgenv().AutoClaimEnabled = false
 getgenv().ESPEnabled = false
 getgenv().FlightSpeed = 100
-getgenv().IsFlying = false -- Prevents Treadmill conflict
 
 local NoclipConnection = nil
 local EggCache = {}
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "ShinyLeak_EggESP"
-ESPFolder.Parent = CoreGui -- Parented to CoreGui to bypass anti-cheat/game deletion
+ESPFolder.Parent = CoreGui 
 
 -- ==========================================
 -- WINDOWS & UI SETUP
 -- ==========================================
 local Window = Library:CreateWindow({
     Title = "ShinyLeak | Steal An Egg",
-    Footer = "v6.0.0 - FIX EDITION",
+    Footer = "v7.0.0 - HOVER EDITION",
     ToggleKeybind = Enum.KeyCode.RightControl,
     Center = true,
     AutoShow = true
@@ -53,7 +51,6 @@ local ESPGroupbox = ESPTab:AddLeftGroupbox("ESP Settings")
 -- ==========================================
 -- CORE SYSTEMS: FILTERING & CACHING
 -- ==========================================
-
 local function IsInPlayerBase(obj)
     local ancestor = obj.Parent
     while ancestor and ancestor ~= game do
@@ -120,7 +117,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- CORE SYSTEMS: ARC-FLIGHT MOVEMENT (ANTI-VOID)
+-- CORE SYSTEMS: TARGETING & NOCLIP
 -- ==========================================
 local function GetClosestEgg()
     local character = LocalPlayer.Character
@@ -164,7 +161,9 @@ local function ToggleNoclip(state)
     end
 end
 
--- NEW: 3-Stage Overhead Arc Flight System (Prevents dying underground)
+-- ==========================================
+-- NEW: CUSTOM TERRAIN-HUGGING HOVER ENGINE
+-- ==========================================
 local function FlyToTarget(targetPart)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
@@ -173,50 +172,63 @@ local function FlyToTarget(targetPart)
     local humanoid = character:FindFirstChild("Humanoid")
     if humanoid and humanoid.Health <= 0 then return end
 
-    getgenv().IsFlying = true -- Signal treadmill loop to pause
     rootPart.Anchored = true 
     
-    -- Target 3 studs ABOVE the egg so character feet don't clip into ground/void
-    local targetPos = targetPart.Position + Vector3.new(0, 3, 0)
-    local currentPos = rootPart.Position
+    local startPos = rootPart.Position
+    local targetPos = targetPart.Position
     
-    -- Sky Altitude Calculation (flies 20 studs above highest point)
-    local safeSkyHeight = math.max(currentPos.Y, targetPos.Y) + 20
+    -- Calculate 2D horizontal distance only
+    local horizontalDist = (Vector3.new(targetPos.X, 0, targetPos.Z) - Vector3.new(startPos.X, 0, startPos.Z)).Magnitude
+    local timeToReach = horizontalDist / getgenv().FlightSpeed
+    local startTime = tick()
     
-    local wayPointAscend = Vector3.new(currentPos.X, safeSkyHeight, currentPos.Z)
-    local wayPointOverhead = Vector3.new(targetPos.X, safeSkyHeight, targetPos.Z)
-    local wayPointDestination = targetPos
+    -- Exclude player from raycasting so we don't accidentally measure our own body
+    local rayParams = RaycastParams.new()
+    rayParams.FilterDescendantsInstances = {character}
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
-    -- Stage 1: Rise up into the sky
-    if (currentPos - wayPointAscend).Magnitude > 2 then
-        local t1Time = (currentPos - wayPointAscend).Magnitude / getgenv().FlightSpeed
-        local t1 = TweenService:Create(rootPart, TweenInfo.new(t1Time, Enum.EasingStyle.Linear), {CFrame = CFrame.new(wayPointAscend)})
-        t1:Play()
-        t1.Completed:Wait()
-    end
-
-    -- Stage 2: Fly horizontally across the sky (above mountains/obstacles)
-    local t2Time = (wayPointAscend - wayPointOverhead).Magnitude / getgenv().FlightSpeed
-    local t2 = TweenService:Create(rootPart, TweenInfo.new(t2Time, Enum.EasingStyle.Linear), {CFrame = CFrame.new(wayPointOverhead)})
-    t2:Play()
-    t2.Completed:Wait()
-
-    -- Stage 3: Descend directly down onto egg
-    local t3Time = (wayPointOverhead - wayPointDestination).Magnitude / getgenv().FlightSpeed
-    local t3 = TweenService:Create(rootPart, TweenInfo.new(t3Time, Enum.EasingStyle.Linear), {CFrame = CFrame.new(wayPointDestination)})
-    t3:Play()
-    t3.Completed:Wait()
-
+    local flightConnection
+    flightConnection = RunService.Heartbeat:Connect(function()
+        local elapsed = tick() - startTime
+        local alpha = math.clamp(elapsed / timeToReach, 0, 1)
+        
+        -- Move smoothly on X and Z axis
+        local currentX = startPos.X + (targetPos.X - startPos.X) * alpha
+        local currentZ = startPos.Z + (targetPos.Z - startPos.Z) * alpha
+        
+        -- Raycast strictly straight down from high up to find the physical ground below us
+        local rayOrigin = Vector3.new(currentX, 1000, currentZ)
+        local rayDirection = Vector3.new(0, -2000, 0)
+        local rayResult = Workspace:Raycast(rayOrigin, rayDirection, rayParams)
+        
+        -- Default to egg height, but if ground is detected, hover 4 studs above it
+        local currentY = targetPos.Y + 3 
+        if rayResult then
+            currentY = rayResult.Position.Y + 4
+        end
+        
+        rootPart.CFrame = CFrame.new(currentX, currentY, currentZ)
+        
+        -- Stop when we reach the destination
+        if alpha >= 1 or not getgenv().AutoFarmEnabled then
+            flightConnection:Disconnect()
+        end
+    end)
+    
+    -- Yield the script until the flight loop finishes
+    repeat task.wait() until tick() - startTime >= timeToReach or not getgenv().AutoFarmEnabled
+    
+    if flightConnection then flightConnection:Disconnect() end
+    
     rootPart.Anchored = false 
+    rootPart.Velocity = Vector3.zero -- Prevent flinging
 
-    -- Force touch interest
-    if targetPart and rootPart and firetouchinterest then
+    -- Force collection
+    if targetPart and rootPart and firetouchinterest and getgenv().AutoFarmEnabled then
         firetouchinterest(rootPart, targetPart, 0)
         task.wait(0.05)
         firetouchinterest(rootPart, targetPart, 1)
     end
-    
-    getgenv().IsFlying = false -- Resume treadmill availability
 end
 
 -- ==========================================
@@ -276,7 +288,7 @@ end
 LeftGroupbox:AddToggle('AutoFarmToggle', {
     Text = 'Auto Farm Public Eggs',
     Default = false,
-    Tooltip = 'Flies safely above map to public eggs using Sky-Arc flight.',
+    Tooltip = 'Hovers 4 studs above the ground. Overrides Treadmills.',
     Callback = function(Value)
         getgenv().AutoFarmEnabled = Value
         ToggleNoclip(Value) 
@@ -299,14 +311,14 @@ LeftGroupbox:AddToggle('AutoFarmToggle', {
 LeftGroupbox:AddToggle('AutoTreadmillToggle', {
     Text = 'Auto Treadmill',
     Default = false,
-    Tooltip = 'Snaps you to nearest treadmill when NOT actively flying to an egg.',
+    Tooltip = 'Teleports to treadmill (Pauses automatically if Auto Farm is ON).',
     Callback = function(Value)
         getgenv().AutoTreadmillEnabled = Value
         if Value then
             task.spawn(function()
                 while getgenv().AutoTreadmillEnabled do
-                    -- Only teleport to treadmill if not currently flying to an egg
-                    if not getgenv().IsFlying then
+                    -- PRIORITY OVERRIDE: Do not teleport if Auto Farm Eggs is currently toggled ON
+                    if not getgenv().AutoFarmEnabled then
                         local character = LocalPlayer.Character
                         local root = character and character:FindFirstChild("HumanoidRootPart")
                         if root then
