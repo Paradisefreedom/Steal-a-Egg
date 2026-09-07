@@ -16,28 +16,52 @@ local AutoFarmTab = Window:AddTab("Autofarm", "home")
 local UtilityTab = Window:AddTab("Utility", "wrench")
 
 -- ================= AUTOFARM TAB =================
--- Left groupbox: Auto Egg
 local AutoEggGroupbox = AutoFarmTab:AddLeftGroupbox("Auto Egg")
 
--- ESP Toggle
+-- Helper function to find all eggs in workspace
+local function getAllEggs()
+    local eggs = {}
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Model") or v:IsA("BasePart") then
+            if v.Name == "Egg" or string.find(v.Name, "Egg") then
+                table.insert(eggs, v)
+            end
+        end
+    end
+    return eggs
+end
+
+-- ESP Toggle (applies to all eggs)
+local espEnabled = false
 AutoEggGroupbox:AddToggle("Enable Egg ESP", {
     Default = false,
     Callback = function(value)
-        local egg = workspace:FindFirstChild("Egg") or workspace:FindFirstChild("Egg", true)
-        if not egg then return end
-        if value then
-            if not egg:FindFirstChild("ESP_Highlight") then
-                local hl = Instance.new("Highlight")
-                hl.Name = "ESP_Highlight"
-                hl.FillColor = Color3.fromRGB(255, 255, 0)
-                hl.OutlineColor = Color3.fromRGB(255, 0, 0)
-                hl.FillTransparency = 0.5
-                hl.OutlineTransparency = 0
-                hl.Parent = egg
+        espEnabled = value
+        local eggs = getAllEggs()
+        for _, egg in pairs(eggs) do
+            if value then
+                if not egg:FindFirstChild("ESP_Highlight") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "ESP_Highlight"
+                    hl.FillColor = Color3.fromRGB(255, 255, 0)
+                    hl.OutlineColor = Color3.fromRGB(255, 0, 0)
+                    hl.FillTransparency = 0.5
+                    hl.OutlineTransparency = 0
+                    hl.Parent = egg
+                end
+            else
+                local hl = egg:FindFirstChild("ESP_Highlight")
+                if hl then hl:Destroy() end
             end
-        else
-            local hl = egg:FindFirstChild("ESP_Highlight")
-            if hl then hl:Destroy() end
+        end
+        if not value then
+            -- Remove highlights from any eggs that might appear later
+            workspace.DescendantAdded:Connect(function(desc)
+                if (desc:IsA("Model") or desc:IsA("BasePart")) and desc.Name == "Egg" then
+                    local hl = desc:FindFirstChild("ESP_Highlight")
+                    if hl then hl:Destroy() end
+                end
+            end)
         end
     end
 })
@@ -51,33 +75,18 @@ AutoEggGroupbox:AddButton({
         local humanoid = character:WaitForChild("Humanoid")
         local rootPart = character:WaitForChild("HumanoidRootPart")
 
-        -- Find egg
-        local egg = workspace:FindFirstChild("Egg")
-        if not egg then
-            for _, v in pairs(workspace:GetDescendants()) do
-                if v.Name == "Egg" and (v:IsA("Model") or v:IsA("BasePart")) then
-                    egg = v
-                    break
-                end
-            end
-        end
-
-        if not egg then
-            Library:Notify({
-                Title = "Error",
-                Description = "Egg not found!",
-                Time = 3
-            })
+        local eggs = getAllEggs()
+        if #eggs == 0 then
+            Library:Notify({ Title = "Error", Description = "No eggs found!", Time = 3 })
             return
         end
 
+        -- Choose the first egg
+        local egg = eggs[1]
         local targetPosition = egg:GetPivot().Position
         print("Egg found at:", targetPosition)
 
-        -- Set flying
         humanoid:ChangeState(Enum.HumanoidStateType.Flying)
-
-        -- Move to egg
         humanoid:MoveTo(targetPosition)
 
         local timeout = 10
@@ -97,10 +106,14 @@ AutoEggGroupbox:AddButton({
             end
         until false
 
-        -- Optionally interact with egg (e.g., ProximityPrompt)
-        local proximity = egg:FindFirstChildOfClass("ProximityPrompt")
-        if proximity then
-            proximity:InputHoldBegin()
+        -- Try to interact (ProximityPrompt or ClickDetector)
+        local prompt = egg:FindFirstChildOfClass("ProximityPrompt")
+        if prompt then
+            prompt:InputHoldBegin()
+        end
+        local click = egg:FindFirstChildOfClass("ClickDetector")
+        if click then
+            fireclickdetector(click)
         end
     end
 })
@@ -111,21 +124,13 @@ AutoEggGroupbox:AddButton({
     Func = function()
         local player = game.Players.LocalPlayer
         local character = player.Character or player.CharacterAdded:Wait()
-        local egg = workspace:FindFirstChild("Egg")
-        if egg then
-            local targetCFrame = egg:GetPivot() * CFrame.new(0, 3, 0)
-            character:SetPrimaryPartCFrame(targetCFrame)
-            Library:Notify({
-                Title = "Teleported",
-                Description = "Teleported to egg!",
-                Time = 2
-            })
+        local eggs = getAllEggs()
+        if #eggs > 0 then
+            local egg = eggs[1]
+            character:SetPrimaryPartCFrame(egg:GetPivot() * CFrame.new(0, 3, 0))
+            Library:Notify({ Title = "Teleported", Description = "Teleported to egg!", Time = 2 })
         else
-            Library:Notify({
-                Title = "Error",
-                Description = "Egg not found!",
-                Time = 2
-            })
+            Library:Notify({ Title = "Error", Description = "No eggs found!", Time = 2 })
         end
     end
 })
@@ -183,11 +188,11 @@ local IslandTab = LocationsTabbox:AddTab("Island")
 IslandTab:AddButton({
     Text = "Teleport to Egg",
     Func = function()
-        local egg = workspace:FindFirstChild("Egg")
-        if egg then
-            local player = game.Players.LocalPlayer
-            local character = player.Character or player.CharacterAdded:Wait()
-            character:SetPrimaryPartCFrame(egg:GetPivot() * CFrame.new(0, 3, 0))
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local eggs = getAllEggs()
+        if #eggs > 0 then
+            character:SetPrimaryPartCFrame(eggs[1]:GetPivot() * CFrame.new(0, 3, 0))
         end
     end
 })
@@ -255,12 +260,17 @@ AutoHitGroupbox:AddToggle("Auto Hit", {
 local MoreSoonGroupbox = UtilityTab:AddRightGroupbox("More Soon")
 MoreSoonGroupbox:AddLabel("More features coming soon!")
 
--- Optional: auto update ESP for newly added eggs
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "Egg" and AutoEggGroupbox then
-        -- Check if ESP toggle is on (simplified)
-        local espOn = false
-        for _, v in pairs(AutoEggGroupbox) do -- not possible, skip; keep manual
+-- Auto-apply ESP to new eggs that spawn
+workspace.DescendantAdded:Connect(function(desc)
+    if espEnabled and (desc:IsA("Model") or desc:IsA("BasePart")) and desc.Name == "Egg" then
+        if not desc:FindFirstChild("ESP_Highlight") then
+            local hl = Instance.new("Highlight")
+            hl.Name = "ESP_Highlight"
+            hl.FillColor = Color3.fromRGB(255, 255, 0)
+            hl.OutlineColor = Color3.fromRGB(255, 0, 0)
+            hl.FillTransparency = 0.5
+            hl.OutlineTransparency = 0
+            hl.Parent = desc
         end
     end
 end)
