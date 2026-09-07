@@ -1,8 +1,7 @@
 -- SHINYLEAK ALL RIGHTS RESERVED!!
--- Advanced "Steal an Egg" Architecture v9.0.0 (Pure Glide Edition)
+-- Advanced "Steal an Egg" Architecture v10.0.0 (Pure Frame-by-Frame Glide Edition)
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -33,7 +32,7 @@ ESPFolder.Parent = CoreGui
 -- ==========================================
 local Window = Library:CreateWindow({
     Title = "ShinyLeak | Steal An Egg",
-    Footer = "v9.0.0 - GLIDE EDITION",
+    Footer = "v10.0.0 - PURE GLIDE EDITION",
     ToggleKeybind = Enum.KeyCode.RightControl,
     Center = true,
     AutoShow = true
@@ -56,7 +55,6 @@ local function IsInPlayerBase(obj)
     local ancestor = obj.Parent
     while ancestor and ancestor ~= game do
         local name = ancestor.Name:lower()
-        -- If it's inside a plot/base folder, ignore it so we don't steal from players' bases
         if name:match("base") or name:match("plot") or name:match("garden") or name:match("tycoon") or name:match("player") then
             return true
         end
@@ -65,7 +63,6 @@ local function IsInPlayerBase(obj)
     return false
 end
 
--- Fix: Finds the *CLOSEST* treadmill so you only go to the one in YOUR base
 local function GetMyTreadmill()
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -191,31 +188,38 @@ local function ToggleNoclip(state)
     end
 end
 
--- FIX: Simple Straight-Line Glide. No flying up, no BodyVelocity. Bypasses Anti-Cheat.
+-- NEW: Pure Frame-by-Frame CFrame Glide. No Anchors. No Tweens. No BodyVelocity.
 local function FlyToTarget(targetPart)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
     
     local rootPart = character.HumanoidRootPart
-    local humanoid = character:FindFirstChild("Humanoid")
-    if humanoid and humanoid.Health <= 0 then return end
 
-    local distance = (rootPart.Position - targetPart.Position).Magnitude
-    local timeToReach = distance / getgenv().FlightSpeed
-    
-    -- Anchor to prevent gravity from pulling us down, then pull in a straight line
-    rootPart.Anchored = true
-    local flightTween = TweenService:Create(rootPart, TweenInfo.new(timeToReach, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPart.Position)})
-    
-    flightTween:Play()
-    flightTween.Completed:Wait()
-
-    rootPart.Anchored = false
-
-    if targetPart and rootPart and firetouchinterest and getgenv().AutoFarmEnabled then
-        firetouchinterest(rootPart, targetPart, 0)
-        task.wait(0.01)
-        firetouchinterest(rootPart, targetPart, 1)
+    -- Glides in a straight line until we are right on top of the egg
+    while getgenv().AutoFarmEnabled and targetPart and targetPart.Parent do
+        local distance = (targetPart.Position - rootPart.Position).Magnitude
+        
+        -- If we are close enough, grab the egg and break the loop
+        if distance < 3 then
+            if firetouchinterest then
+                firetouchinterest(rootPart, targetPart, 0)
+                task.wait(0.01)
+                firetouchinterest(rootPart, targetPart, 1)
+            end
+            break
+        end
+        
+        -- Calculate direction and how far to move this specific frame
+        local deltaTime = RunService.Heartbeat:Wait()
+        local direction = (targetPart.Position - rootPart.Position).Unit
+        local step = direction * (getgenv().FlightSpeed * deltaTime)
+        
+        -- Smoothly slide the player
+        rootPart.CFrame = rootPart.CFrame + step
+        
+        -- Nullify physical momentum so gravity doesn't drop you and anti-cheat doesn't flag velocity
+        rootPart.AssemblyLinearVelocity = Vector3.zero
+        rootPart.AssemblyAngularVelocity = Vector3.zero
     end
 end
 
@@ -261,7 +265,7 @@ end
 LeftGroupbox:AddToggle('AutoFarmToggle', {
     Text = 'Auto Farm Public Eggs',
     Default = false,
-    Tooltip = 'Glides in a direct straight line to the egg.',
+    Tooltip = 'Smooth frame-by-frame glide to bypass anti-cheat.',
     Callback = function(Value)
         getgenv().AutoFarmEnabled = Value
         ToggleNoclip(Value) 
@@ -272,9 +276,8 @@ LeftGroupbox:AddToggle('AutoFarmToggle', {
                     if targetEgg then
                         FlyToTarget(targetEgg)
                     else
-                        task.wait(0.5) 
+                        task.wait(0.1) 
                     end
-                    task.wait(0.1) 
                 end
             end)
         end
@@ -296,7 +299,6 @@ LeftGroupbox:AddToggle('AutoTreadmillToggle', {
                         local myTreadmill = GetMyTreadmill()
                         
                         if root and myTreadmill then
-                            -- Snaps directly onto your local treadmill safely
                             root.CFrame = myTreadmill.CFrame * CFrame.new(0, 2.5, 0)
                         end
                     end
@@ -344,8 +346,8 @@ RightGroupbox:AddToggle('AutoClaimToggle', {
 MovementGroupbox:AddSlider('FlightSpeedSlider', {
     Text = 'Flight Speed',
     Default = 100,
-    Min = 50,
-    Max = 400,
+    Min = 25,
+    Max = 300,
     Rounding = 0,
     Compact = false,
     Callback = function(Value)
