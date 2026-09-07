@@ -1,215 +1,58 @@
--- SHINYLEAK ALL RIGHTS RESERVED!!
+local function autoFarmEggs()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local rootPart = character:WaitForChild("HumanoidRootPart")
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
-
--- WINDOW
-local Window = Library:CreateWindow({
-    Title = "ShinyLeak",
-    Footer = "v1.0.0",
-    ToggleKeybind = Enum.KeyCode.RightControl,
-    Center = true,
-    AutoShow = true
-})
-
--- TABS
-local AutoFarmTab = Window:AddTab("Autofarm", "home")
-local UtilityTab = Window:AddTab("Utility", "wrench")
-
--- ================= AUTOFARM TAB =================
--- Left groupbox: Auto Egg
-local AutoEggGroupbox = AutoFarmTab:AddLeftGroupbox("Auto Egg")
-
--- ESP Toggle
-AutoEggGroupbox:AddToggle("Enable Egg ESP", {
-    Default = false,
-    Callback = function(value)
-        local egg = workspace:FindFirstChild("Egg")
-        if not egg then return end
-        if value then
-            if not egg:FindFirstChild("ESP_Highlight") then
-                local hl = Instance.new("Highlight")
-                hl.Name = "ESP_Highlight"
-                hl.FillColor = Color3.fromRGB(255, 255, 0)
-                hl.OutlineColor = Color3.fromRGB(255, 0, 0)
-                hl.FillTransparency = 0.5
-                hl.OutlineTransparency = 0
-                hl.Parent = egg
-            end
-        else
-            local hl = egg:FindFirstChild("ESP_Highlight")
-            if hl then hl:Destroy() end
-        end
-    end
-})
-
--- Auto Farm Eggs Button
-AutoEggGroupbox:AddButton({
-    Text = "Auto Farm Eggs",
-    Func = function()
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character:WaitForChild("Humanoid")
-        local egg = workspace:FindFirstChild("Egg")
-        if egg then
-            local targetPosition = egg:GetPivot().Position
-            print("Egg position:", targetPosition)
-            humanoid:MoveTo(targetPosition)
-            if humanoid:GetState() ~= Enum.HumanoidStateType.Flying then
-                humanoid:ChangeState(Enum.HumanoidStateType.Flying)
-            end
-            repeat
-                task.wait()
-                humanoid:MoveTo(targetPosition)
-            until (character.HumanoidRootPart.Position - targetPosition).Magnitude < 5
-        else
-            print("Egg not found")
-        end
-    end
-})
-
--- Right groupbox: Auto hatch
-local AutoHatchGroupbox = AutoFarmTab:AddRightGroupbox("Auto hatch")
-AutoHatchGroupbox:AddButton({
-    Text = "Auto Hatch",
-    Func = function()
-        print("Auto Hatch clicked - placeholder")
-        -- Add your hatching logic here
-    end
-})
-
--- Left groupbox: Movements
-local MovementsGroupbox = AutoFarmTab:AddLeftGroupbox("Movements")
-MovementsGroupbox:AddToggle("Fly", {
-    Default = false,
-    Callback = function(value)
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character:WaitForChild("Humanoid")
-        if value then
-            humanoid:ChangeState(Enum.HumanoidStateType.Flying)
-        else
-            humanoid:ChangeState(Enum.HumanoidStateType.Running)
-        end
-    end
-})
-MovementsGroupbox:AddToggle("Noclip", {
-    Default = false,
-    Callback = function(value)
-        -- Noclip implementation (simple)
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = not value
+    -- Find the egg (search direct children and descendants)
+    local egg = workspace:FindFirstChild("Egg")
+    if not egg then
+        -- Try searching all descendants (in case it's nested)
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v.Name == "Egg" and (v:IsA("Model") or v:IsA("BasePart")) then
+                egg = v
+                break
             end
         end
     end
-})
 
--- Right groupbox: Auto sell
-local AutoSellGroupbox = AutoFarmTab:AddRightGroupbox("Auto sell")
-AutoSellGroupbox:AddButton({
-    Text = "Auto Sell",
-    Func = function()
-        print("Auto Sell clicked - placeholder")
-        -- Add your selling logic here
+    if not egg then
+        Library:Notify({
+            Title = "Error",
+            Description = "Egg not found!",
+            Time = 3
+        })
+        return
     end
-})
 
--- ================= AUTOFARM TABBOXES =================
--- Left Tabbox: Locations
-local LocationsTabbox = AutoFarmTab:AddLeftTabbox("Locations")
-local IslandTab = LocationsTabbox:AddTab("Island")
-IslandTab:AddButton({
-    Text = "Teleport to Egg",
-    Func = function()
-        local egg = workspace:FindFirstChild("Egg")
-        if egg then
-            local player = game.Players.LocalPlayer
-            local character = player.Character or player.CharacterAdded:Wait()
-            character:SetPrimaryPartCFrame(egg:GetPivot())
-        else
-            print("Egg not found")
+    local targetPosition = egg:GetPivot().Position
+    print("Egg found at:", targetPosition)
+
+    -- Enable flying
+    humanoid:ChangeState(Enum.HumanoidStateType.Flying)
+
+    -- Attempt to move to the egg
+    humanoid:MoveTo(targetPosition)
+
+    -- Wait until close enough or timeout
+    local timeout = 10
+    local startTime = tick()
+    repeat
+        task.wait(0.1)
+        humanoid:MoveTo(targetPosition)
+        local distance = (rootPart.Position - targetPosition).Magnitude
+        if distance < 5 then
+            print("Reached egg!")
+            break
         end
-    end
-})
-
--- Right Tabbox: Speed
-local SpeedTabbox = AutoFarmTab:AddRightTabbox("Speed")
-local HoverSpeedTab = SpeedTabbox:AddTab("hover speed")
-HoverSpeedTab:AddSlider("HoverSpeed", {
-    Text = "Hover Speed",
-    Default = 16,
-    Min = 1,
-    Max = 100,
-    Rounding = 0,
-    Callback = function(value)
-        -- You could adjust WalkSpeed / FlySpeed here
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character:WaitForChild("Humanoid")
-        humanoid.WalkSpeed = value
-        if humanoid:GetState() == Enum.HumanoidStateType.Flying then
-            -- For flying you might need custom handling
+        -- If movement is stuck, teleport as fallback
+        if tick() - startTime > timeout then
+            print("Movement timed out, teleporting...")
+            rootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 3, 0))
+            break
         end
-    end
-})
+    until false
 
-local ManualSpeedTab = SpeedTabbox:AddTab("manual Speed")
-ManualSpeedTab:AddSlider("ManualSpeed", {
-    Text = "Manual Speed",
-    Default = 16,
-    Min = 1,
-    Max = 100,
-    Rounding = 0,
-    Callback = function(value)
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character:WaitForChild("Humanoid")
-        humanoid.WalkSpeed = value
-    end
-})
-
--- Right Tabbox: Auto
-local AutoTabbox = AutoFarmTab:AddRightTabbox("Auto")
-local AutoBuyTrailsTab = AutoTabbox:AddTab("AutoBuy Trails")
-AutoBuyTrailsTab:AddButton({
-    Text = "Buy All Trails",
-    Func = function()
-        print("AutoBuy Trails clicked - placeholder")
-        -- Add trail buying logic
-    end
-})
-
-local AutoTab = AutoTabbox:AddTab("Auto")
-AutoTab:AddToggle("Auto Collect", {
-    Text = "Auto Collect Eggs",
-    Default = false,
-    Callback = function(value)
-        print("Auto Collect toggled:", value)
-        -- Add auto collect logic
-    end
-})
-
--- ================= UTILITY TAB =================
-local AutoHitGroupbox = UtilityTab:AddLeftGroupbox("Auto hit")
-AutoHitGroupbox:AddToggle("Auto Hit", {
-    Default = false,
-    Callback = function(value)
-        print("Auto Hit toggled:", value)
-        -- Add auto hit logic
-    end
-})
-
-local MoreSoonGroupbox = UtilityTab:AddRightGroupbox("More Soon")
-MoreSoonGroupbox:AddLabel("More features coming soon!")
-
--- Optional: auto update ESP for newly added eggs
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "Egg" then
-        local espToggle = AutoEggGroupbox:GetToggle("Enable Egg ESP") -- Assuming such method exists, otherwise keep track manually
-        -- Simpler: check if a highlight already exists; not crucial for the skeleton.
-    end
-end)
-
-print("ShinyLeak UI loaded successfully!")
+    -- After reaching, optionally collect the egg (if possible)
+    -- You can add code to click the egg or interact with it here
+end
