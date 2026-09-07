@@ -1,8 +1,11 @@
 -- SHINYLEAK ALL RIGHTS RESERVED!!
 
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
 
--- WINDOW
+-- WINDOWS
 local Window = Library:CreateWindow({
     Title = "ShinyLeak",
     Footer = "v1.0.0",
@@ -12,267 +15,45 @@ local Window = Library:CreateWindow({
 })
 
 -- TABS
-local AutoFarmTab = Window:AddTab("Autofarm", "home")
-local UtilityTab = Window:AddTab("Utility", "wrench")
+local MainTab = Window:AddTab("Main", "home")
+local LeftGroupbox = MainTab:AddLeftGroupbox("Settings")
+local RightGroupbox = MainTab:AddRightGroupbox("Information")
 
--- ================= AUTOFARM TAB =================
-local AutoEggGroupbox = AutoFarmTab:AddLeftGroupbox("Auto Egg")
+-- TAB BOXES
+local Tabbox = MainTab:AddLeftTabbox("Extra Settings")
+local Tab1 = Tabbox:AddTab("General")
+local Tab2 = Tabbox:AddTab("Advanced")
 
--- Helper function to find all eggs in workspace
-local function getAllEggs()
-    local eggs = {}
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("Model") or v:IsA("BasePart") then
-            if v.Name == "Egg" or string.find(v.Name, "Egg") then
-                table.insert(eggs, v)
-            end
-        end
-    end
-    return eggs
-end
-
--- ESP Toggle (applies to all eggs)
-local espEnabled = false
-AutoEggGroupbox:AddToggle("Enable Egg ESP", {
-    Default = false,
-    Callback = function(value)
-        espEnabled = value
-        local eggs = getAllEggs()
-        for _, egg in pairs(eggs) do
-            if value then
-                if not egg:FindFirstChild("ESP_Highlight") then
-                    local hl = Instance.new("Highlight")
-                    hl.Name = "ESP_Highlight"
-                    hl.FillColor = Color3.fromRGB(255, 255, 0)
-                    hl.OutlineColor = Color3.fromRGB(255, 0, 0)
-                    hl.FillTransparency = 0.5
-                    hl.OutlineTransparency = 0
-                    hl.Parent = egg
-                end
-            else
-                local hl = egg:FindFirstChild("ESP_Highlight")
-                if hl then hl:Destroy() end
-            end
-        end
-        if not value then
-            -- Remove highlights from any eggs that might appear later
-            workspace.DescendantAdded:Connect(function(desc)
-                if (desc:IsA("Model") or desc:IsA("BasePart")) and desc.Name == "Egg" then
-                    local hl = desc:FindFirstChild("ESP_Highlight")
-                    if hl then hl:Destroy() end
-                end
-            end)
-        end
-    end
-})
-
--- Auto Farm Eggs Button
-AutoEggGroupbox:AddButton({
+-- BUTTONS
+LeftGroupbox:AddButton({
     Text = "Auto Farm Eggs",
     Func = function()
-        local player = game.Players.LocalPlayer
+        -- 1. Get the local player and their character
+        local player = Players.LocalPlayer
         local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character:WaitForChild("Humanoid")
         local rootPart = character:WaitForChild("HumanoidRootPart")
-
-        local eggs = getAllEggs()
-        if #eggs == 0 then
-            Library:Notify({ Title = "Error", Description = "No eggs found!", Time = 3 })
-            return
-        end
-
-        -- Choose the first egg
-        local egg = eggs[1]
-        local targetPosition = egg:GetPivot().Position
-        print("Egg found at:", targetPosition)
-
-        humanoid:ChangeState(Enum.HumanoidStateType.Flying)
-        humanoid:MoveTo(targetPosition)
-
-        local timeout = 10
-        local startTime = tick()
-        repeat
-            task.wait(0.1)
-            humanoid:MoveTo(targetPosition)
+        
+        -- 2. Find the egg in the workspace
+        local egg = workspace:FindFirstChild("Egg")
+        
+        if egg and rootPart then
+            local targetPosition = egg:GetPivot().Position
+            
+            -- 3. Calculate distance and time to make the flight speed consistent
             local distance = (rootPart.Position - targetPosition).Magnitude
-            if distance < 5 then
-                print("Reached egg!")
-                break
-            end
-            if tick() - startTime > timeout then
-                print("Movement timed out, teleporting...")
-                rootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 3, 0))
-                break
-            end
-        until false
-
-        -- Try to interact (ProximityPrompt or ClickDetector)
-        local prompt = egg:FindFirstChildOfClass("ProximityPrompt")
-        if prompt then
-            prompt:InputHoldBegin()
-        end
-        local click = egg:FindFirstChildOfClass("ClickDetector")
-        if click then
-            fireclickdetector(click)
-        end
-    end
-})
-
--- Teleport to Egg Button
-AutoEggGroupbox:AddButton({
-    Text = "Teleport to Egg",
-    Func = function()
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local eggs = getAllEggs()
-        if #eggs > 0 then
-            local egg = eggs[1]
-            character:SetPrimaryPartCFrame(egg:GetPivot() * CFrame.new(0, 3, 0))
-            Library:Notify({ Title = "Teleported", Description = "Teleported to egg!", Time = 2 })
+            local speed = 50 -- You can adjust this number to fly faster or slower
+            local timeToReach = distance / speed
+            
+            -- 4. Create and play the hover/fly animation (Tween)
+            local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
+            local flyTween = TweenService:Create(rootPart, tweenInfo, {CFrame = CFrame.new(targetPosition)})
+            
+            flyTween:Play()
+            print("Flying to egg at: " .. tostring(targetPosition))
         else
-            Library:Notify({ Title = "Error", Description = "No eggs found!", Time = 2 })
+            warn("Could not find the Egg in workspace or your character hasn't loaded!")
         end
-    end
+    end,
+    DoubleClick = false,
+    Tooltip = "Makes you hover/fly directly to the egg"
 })
-
--- Right groupbox: Auto hatch
-local AutoHatchGroupbox = AutoFarmTab:AddRightGroupbox("Auto hatch")
-AutoHatchGroupbox:AddButton({
-    Text = "Auto Hatch",
-    Func = function()
-        print("Auto Hatch clicked - placeholder")
-    end
-})
-
--- Left groupbox: Movements
-local MovementsGroupbox = AutoFarmTab:AddLeftGroupbox("Movements")
-MovementsGroupbox:AddToggle("Fly", {
-    Default = false,
-    Callback = function(value)
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character:WaitForChild("Humanoid")
-        if value then
-            humanoid:ChangeState(Enum.HumanoidStateType.Flying)
-        else
-            humanoid:ChangeState(Enum.HumanoidStateType.Running)
-        end
-    end
-})
-MovementsGroupbox:AddToggle("Noclip", {
-    Default = false,
-    Callback = function(value)
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = not value
-            end
-        end
-    end
-})
-
--- Right groupbox: Auto sell
-local AutoSellGroupbox = AutoFarmTab:AddRightGroupbox("Auto sell")
-AutoSellGroupbox:AddButton({
-    Text = "Auto Sell",
-    Func = function()
-        print("Auto Sell clicked - placeholder")
-    end
-})
-
--- ================= AUTOFARM TABBOXES =================
--- Left Tabbox: Locations
-local LocationsTabbox = AutoFarmTab:AddLeftTabbox("Locations")
-local IslandTab = LocationsTabbox:AddTab("Island")
-IslandTab:AddButton({
-    Text = "Teleport to Egg",
-    Func = function()
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local eggs = getAllEggs()
-        if #eggs > 0 then
-            character:SetPrimaryPartCFrame(eggs[1]:GetPivot() * CFrame.new(0, 3, 0))
-        end
-    end
-})
-
--- Right Tabbox: Speed
-local SpeedTabbox = AutoFarmTab:AddRightTabbox("Speed")
-local HoverSpeedTab = SpeedTabbox:AddTab("hover speed")
-HoverSpeedTab:AddSlider("HoverSpeed", {
-    Text = "Hover Speed",
-    Default = 16,
-    Min = 1,
-    Max = 100,
-    Rounding = 0,
-    Callback = function(value)
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character:WaitForChild("Humanoid")
-        humanoid.WalkSpeed = value
-    end
-})
-
-local ManualSpeedTab = SpeedTabbox:AddTab("manual Speed")
-ManualSpeedTab:AddSlider("ManualSpeed", {
-    Text = "Manual Speed",
-    Default = 16,
-    Min = 1,
-    Max = 100,
-    Rounding = 0,
-    Callback = function(value)
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character:WaitForChild("Humanoid")
-        humanoid.WalkSpeed = value
-    end
-})
-
--- Right Tabbox: Auto
-local AutoTabbox = AutoFarmTab:AddRightTabbox("Auto")
-local AutoBuyTrailsTab = AutoTabbox:AddTab("AutoBuy Trails")
-AutoBuyTrailsTab:AddButton({
-    Text = "Buy All Trails",
-    Func = function()
-        print("AutoBuy Trails clicked - placeholder")
-    end
-})
-
-local AutoTab = AutoTabbox:AddTab("Auto")
-AutoTab:AddToggle("Auto Collect", {
-    Text = "Auto Collect Eggs",
-    Default = false,
-    Callback = function(value)
-        print("Auto Collect toggled:", value)
-    end
-})
-
--- ================= UTILITY TAB =================
-local AutoHitGroupbox = UtilityTab:AddLeftGroupbox("Auto hit")
-AutoHitGroupbox:AddToggle("Auto Hit", {
-    Default = false,
-    Callback = function(value)
-        print("Auto Hit toggled:", value)
-    end
-})
-
-local MoreSoonGroupbox = UtilityTab:AddRightGroupbox("More Soon")
-MoreSoonGroupbox:AddLabel("More features coming soon!")
-
--- Auto-apply ESP to new eggs that spawn
-workspace.DescendantAdded:Connect(function(desc)
-    if espEnabled and (desc:IsA("Model") or desc:IsA("BasePart")) and desc.Name == "Egg" then
-        if not desc:FindFirstChild("ESP_Highlight") then
-            local hl = Instance.new("Highlight")
-            hl.Name = "ESP_Highlight"
-            hl.FillColor = Color3.fromRGB(255, 255, 0)
-            hl.OutlineColor = Color3.fromRGB(255, 0, 0)
-            hl.FillTransparency = 0.5
-            hl.OutlineTransparency = 0
-            hl.Parent = desc
-        end
-    end
-end)
-
-print("ShinyLeak UI loaded successfully!")
