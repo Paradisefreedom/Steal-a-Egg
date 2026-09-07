@@ -1,102 +1,20 @@
--- SHINYLEAK ALL RIGHTS RESERVED!!
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
+local Options = Library.Options
+local Toggles = Library.Toggles
 
--- WINDOW
+Library.ForceCheckbox = false -- Forces AddToggle to AddCheckbox
+Library.ShowToggleFrameInKeybinds = true
+
 local Window = Library:CreateWindow({
-    Title = "ShinyLeak",
-    Footer = "v1.0.0",
-    ToggleKeybind = Enum.KeyCode.RightControl,
-    Center = true,
-    AutoShow = true
+
+-- Windows
+	Title = "ShinyLeak",
+	Footer = "version: 0.0.0",
+	Icon = 95816097006870,
+	NotifySide = "Right",
+	ShowCustomCursor = true,
 })
-
--- TABS
-local MainTab = Window:AddTab("Main", "home")
-local ESPTab = Window:AddTab("ESP", "eye")
-
--- MAIN TAB - GROUPBOXES
-local FarmingGroupbox = MainTab:AddLeftGroupbox("Farming")
-
--- AUTO FARM EGG FUNCTION
-local function autoFarmEggs()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-    local egg = workspace:FindFirstChild("Egg")
-
-    if egg then
-        local targetPosition = egg:GetPivot().Position
-        print("Egg position: ", targetPosition)
-
-        -- Move to egg
-        humanoid:MoveTo(targetPosition)
-        
-        -- Enable flying for smooth movement
-        if humanoid:GetState() ~= Enum.HumanoidStateType.Flying then
-            humanoid:ChangeState(Enum.HumanoidStateType.Flying)
-        end
-
-        -- Keep moving until close enough
-        repeat
-            task.wait()
-            humanoid:MoveTo(targetPosition)
-        until (character.HumanoidRootPart.Position - targetPosition).Magnitude < 5
-    else
-        print("Egg not found in workspace")
-    end
-end
-
--- BUTTON
-FarmingGroupbox:AddButton("Auto Farm Eggs", function()
-    autoFarmEggs()
-end)
-
--- ESP TAB
-local ESPGroupbox = ESPTab:AddLeftGroupbox("Egg ESP")
-
-local espEnabled = false
-
-local function updateESP()
-    local egg = workspace:FindFirstChild("Egg")
-    if not egg then
-        print("Egg not found")
-        return
-    end
-
-    if espEnabled then
-        -- Add highlight if not already there
-        if not egg:FindFirstChild("ESP_Highlight") then
-            local highlight = Instance.new("Highlight")
-            highlight.Name = "ESP_Highlight"
-            highlight.FillColor = Color3.fromRGB(255, 255, 0)   -- yellow fill
-            highlight.OutlineColor = Color3.fromRGB(255, 0, 0)  -- red outline
-            highlight.FillTransparency = 0.5
-            highlight.OutlineTransparency = 0
-            highlight.Parent = egg
-        end
-    else
-        -- Remove highlight
-        local hl = egg:FindFirstChild("ESP_Highlight")
-        if hl then
-            hl:Destroy()
-        end
-    end
-end
-
-ESPGroupbox:AddToggle("Enable Egg ESP", {
-    Default = false,
-    Callback = function(value)
-        espEnabled = value
-        updateESP()
-    end
-})
-
-ESPGroupbox:AddLabel("Highlights eggs through walls")
-
--- Auto-update ESP when an egg is added later
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "Egg" and espEnabled then
-        updateESP()
-    end
-end)
