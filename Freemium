@@ -1,59 +1,168 @@
 -- SHINYLEAK ALL RIGHTS RESERVED!!
+-- Advanced "Steal an Egg" Auto-Farm Architecture
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
+local LocalPlayer = Players.LocalPlayer
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
 
--- WINDOWS
+-- STATE VARIABLES
+local getgenv = getgenv or function() return _G end
+getgenv().AutoFarmEnabled = false
+getgenv().FlightSpeed = 100
+local NoclipConnection = nil
+
+-- WINDOWS & UI SETUP
 local Window = Library:CreateWindow({
-    Title = "ShinyLeak",
-    Footer = "v1.0.0",
+    Title = "ShinyLeak | Steal An Egg",
+    Footer = "v2.0.0 - Advanced Edition",
     ToggleKeybind = Enum.KeyCode.RightControl,
     Center = true,
     AutoShow = true
 })
 
--- TABS
 local MainTab = Window:AddTab("Main", "home")
-local LeftGroupbox = MainTab:AddLeftGroupbox("Settings")
-local RightGroupbox = MainTab:AddRightGroupbox("Information")
+local LeftGroupbox = MainTab:AddLeftGroupbox("Farming Systems")
+local RightGroupbox = MainTab:AddRightGroupbox("Movement Settings")
 
--- TAB BOXES
-local Tabbox = MainTab:AddLeftTabbox("Extra Settings")
-local Tab1 = Tabbox:AddTab("General")
-local Tab2 = Tabbox:AddTab("Advanced")
+-- CORE FUNCTIONS
 
--- BUTTONS
-LeftGroupbox:AddButton({
-    Text = "Auto Farm Eggs",
-    Func = function()
-        -- 1. Get the local player and their character
-        local player = Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local rootPart = character:WaitForChild("HumanoidRootPart")
-        
-        -- 2. Find the egg in the workspace
-        local egg = workspace:FindFirstChild("Egg")
-        
-        if egg and rootPart then
-            local targetPosition = egg:GetPivot().Position
-            
-            -- 3. Calculate distance and time to make the flight speed consistent
-            local distance = (rootPart.Position - targetPosition).Magnitude
-            local speed = 50 -- You can adjust this number to fly faster or slower
-            local timeToReach = distance / speed
-            
-            -- 4. Create and play the hover/fly animation (Tween)
-            local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
-            local flyTween = TweenService:Create(rootPart, tweenInfo, {CFrame = CFrame.new(targetPosition)})
-            
-            flyTween:Play()
-            print("Flying to egg at: " .. tostring(targetPosition))
-        else
-            warn("Could not find the Egg in workspace or your character hasn't loaded!")
+-- 1. Dynamic Egg Targeting System
+-- In "Steal an egg", eggs can be nested in folders, models, or spawned dynamically. 
+-- This function calculates the absolute closest egg to your character to optimize travel time.
+local function GetClosestEgg()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
+    local rootPart = character.HumanoidRootPart
+
+    local closestEgg = nil
+    local shortestDistance = math.huge
+
+    -- Broad search: iterates through workspace to find any BasePart or Model named "Egg"
+    -- If the game uses a specific folder (e.g., workspace.Eggs), it will still find it.
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj.Name:lower():match("egg") then
+            -- Determine the position regardless of whether it's a Model or a Part
+            local targetPos = nil
+            local targetPart = nil
+
+            if obj:IsA("Model") and obj.PrimaryPart then
+                targetPos = obj:GetPivot().Position
+                targetPart = obj.PrimaryPart
+            elseif obj:IsA("BasePart") then
+                targetPos = obj.Position
+                targetPart = obj
+            end
+
+            -- Validate and calculate distance
+            if targetPos and targetPart then
+                local distance = (rootPart.Position - targetPos).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestEgg = targetPart
+                end
+            end
         end
-    end,
-    DoubleClick = false,
-    Tooltip = "Makes you hover/fly directly to the egg"
+    end
+
+    return closestEgg
+end
+
+-- 2. Anti-Collision (Noclip) Engine
+-- Prevents your character from getting stuck on walls, terrain, or buildings while flying.
+local function ToggleNoclip(state)
+    if state then
+        if not NoclipConnection then
+            NoclipConnection = RunService.Stepped:Connect(function()
+                local char = LocalPlayer.Character
+                if char then
+                    for _, part in pairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end
+    else
+        if NoclipConnection then
+            NoclipConnection:Disconnect()
+            NoclipConnection = nil
+        end
+    end
+end
+
+-- 3. Tween Flight Logic & Touch Bypass
+local function FlyToTarget(targetPart)
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local rootPart = character.HumanoidRootPart
+    local humanoid = character:FindFirstChild("Humanoid")
+    
+    -- Suspend gravity effects so the character doesn't glitch during flight
+    if humanoid then humanoid.PlatformStand = true end
+
+    local distance = (rootPart.Position - targetPart.Position).Magnitude
+    local timeToReach = distance / getgenv().FlightSpeed
+
+    local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
+    local flightTween = TweenService:Create(rootPart, tweenInfo, {CFrame = CFrame.new(targetPart.Position)})
+    
+    flightTween:Play()
+    flightTween.Completed:Wait()
+
+    -- Failsafe: Force a physical touch event on the server to ensure the egg is collected
+    if targetPart and rootPart then
+        if firetouchinterest then
+            firetouchinterest(rootPart, targetPart, 0)
+            task.wait(0.1)
+            firetouchinterest(rootPart, targetPart, 1)
+        end
+    end
+    
+    if humanoid then humanoid.PlatformStand = false end
+end
+
+-- UI INTEGRATION
+
+LeftGroupbox:AddToggle('AutoFarmToggle', {
+    Text = 'Enable Auto Farm',
+    Default = false,
+    Tooltip = 'Continuously searches for and flies to the closest egg.',
+    Callback = function(Value)
+        getgenv().AutoFarmEnabled = Value
+        ToggleNoclip(Value) -- Enable Noclip while auto farming
+        
+        if Value then
+            task.spawn(function()
+                while getgenv().AutoFarmEnabled do
+                    local targetEgg = GetClosestEgg()
+                    
+                    if targetEgg then
+                        FlyToTarget(targetEgg)
+                    else
+                        -- Wait slightly longer if no eggs are found to reduce lag
+                        task.wait(1) 
+                    end
+                    task.wait(0.1) -- Small buffer to prevent crashing
+                end
+            end)
+        end
+    end
+})
+
+RightGroupbox:AddSlider('FlightSpeedSlider', {
+    Text = 'Flight Speed',
+    Default = 100,
+    Min = 50,
+    Max = 300,
+    Rounding = 0,
+    Compact = false,
+    Callback = function(Value)
+        getgenv().FlightSpeed = Value
+    end
 })
