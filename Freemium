@@ -1,5 +1,5 @@
 -- SHINYLEAK ALL RIGHTS RESERVED!!
--- Advanced "Steal an Egg" Architecture v5.0.0 (Pro Edition)
+-- Advanced "Steal an Egg" Architecture v6.0.0 (Anti-Void & Arc-Flight Edition)
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -21,6 +21,7 @@ getgenv().AutoUpgradeEnabled = false
 getgenv().AutoClaimEnabled = false
 getgenv().ESPEnabled = false
 getgenv().FlightSpeed = 100
+getgenv().IsFlying = false -- Prevents Treadmill conflict
 
 local NoclipConnection = nil
 local EggCache = {}
@@ -33,7 +34,7 @@ ESPFolder.Parent = CoreGui -- Parented to CoreGui to bypass anti-cheat/game dele
 -- ==========================================
 local Window = Library:CreateWindow({
     Title = "ShinyLeak | Steal An Egg",
-    Footer = "v5.0.0 - PRO EDITION",
+    Footer = "v6.0.0 - FIX EDITION",
     ToggleKeybind = Enum.KeyCode.RightControl,
     Center = true,
     AutoShow = true
@@ -53,12 +54,10 @@ local ESPGroupbox = ESPTab:AddLeftGroupbox("ESP Settings")
 -- CORE SYSTEMS: FILTERING & CACHING
 -- ==========================================
 
--- A strict filter to prevent targeting eggs in private player plots/gardens
 local function IsInPlayerBase(obj)
     local ancestor = obj.Parent
     while ancestor and ancestor ~= game do
         local name = ancestor.Name:lower()
-        -- If the egg is inside any folder or model with these names, ignore it
         if name:match("base") or name:match("plot") or name:match("garden") or name:match("tycoon") or name:match("player") then
             return true
         end
@@ -67,13 +66,11 @@ local function IsInPlayerBase(obj)
     return false
 end
 
--- Sync Cache Engine: Scans map safely and filters out bad targets
 task.spawn(function()
     while task.wait(1) do
         local newCache = {}
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj.Name:lower():match("egg") then
-                -- Check if it's in a public area, not a player base
                 if not IsInPlayerBase(obj) then
                     if obj:IsA("BasePart") then
                         table.insert(newCache, obj)
@@ -102,11 +99,11 @@ local function UpdateESP()
 
     local count = 0
     for _, eggPart in pairs(EggCache) do
-        if count >= 30 then break end -- Roblox engine limits Highlights to 31 maximum
+        if count >= 30 then break end
         
         local highlight = Instance.new("Highlight")
         highlight.Adornee = eggPart.Parent:IsA("Model") and eggPart.Parent or eggPart
-        highlight.FillColor = Color3.fromRGB(255, 215, 0) -- Shiny Gold
+        highlight.FillColor = Color3.fromRGB(255, 215, 0)
         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.FillTransparency = 0.5
         highlight.OutlineTransparency = 0.1
@@ -123,7 +120,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- CORE SYSTEMS: TARGETING & MOVEMENT
+-- CORE SYSTEMS: ARC-FLIGHT MOVEMENT (ANTI-VOID)
 -- ==========================================
 local function GetClosestEgg()
     local character = LocalPlayer.Character
@@ -167,6 +164,7 @@ local function ToggleNoclip(state)
     end
 end
 
+-- NEW: 3-Stage Overhead Arc Flight System (Prevents dying underground)
 local function FlyToTarget(targetPart)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
@@ -175,33 +173,56 @@ local function FlyToTarget(targetPart)
     local humanoid = character:FindFirstChild("Humanoid")
     if humanoid and humanoid.Health <= 0 then return end
 
-    -- Anchor to prevent gravity from messing up the flight path
+    getgenv().IsFlying = true -- Signal treadmill loop to pause
     rootPart.Anchored = true 
     
-    local distance = (rootPart.Position - targetPart.Position).Magnitude
-    local timeToReach = distance / getgenv().FlightSpeed
+    -- Target 3 studs ABOVE the egg so character feet don't clip into ground/void
+    local targetPos = targetPart.Position + Vector3.new(0, 3, 0)
+    local currentPos = rootPart.Position
+    
+    -- Sky Altitude Calculation (flies 20 studs above highest point)
+    local safeSkyHeight = math.max(currentPos.Y, targetPos.Y) + 20
+    
+    local wayPointAscend = Vector3.new(currentPos.X, safeSkyHeight, currentPos.Z)
+    local wayPointOverhead = Vector3.new(targetPos.X, safeSkyHeight, targetPos.Z)
+    local wayPointDestination = targetPos
 
-    local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
-    local flightTween = TweenService:Create(rootPart, tweenInfo, {CFrame = CFrame.new(targetPart.Position)})
-    
-    flightTween:Play()
-    flightTween.Completed:Wait()
-    
+    -- Stage 1: Rise up into the sky
+    if (currentPos - wayPointAscend).Magnitude > 2 then
+        local t1Time = (currentPos - wayPointAscend).Magnitude / getgenv().FlightSpeed
+        local t1 = TweenService:Create(rootPart, TweenInfo.new(t1Time, Enum.EasingStyle.Linear), {CFrame = CFrame.new(wayPointAscend)})
+        t1:Play()
+        t1.Completed:Wait()
+    end
+
+    -- Stage 2: Fly horizontally across the sky (above mountains/obstacles)
+    local t2Time = (wayPointAscend - wayPointOverhead).Magnitude / getgenv().FlightSpeed
+    local t2 = TweenService:Create(rootPart, TweenInfo.new(t2Time, Enum.EasingStyle.Linear), {CFrame = CFrame.new(wayPointOverhead)})
+    t2:Play()
+    t2.Completed:Wait()
+
+    -- Stage 3: Descend directly down onto egg
+    local t3Time = (wayPointOverhead - wayPointDestination).Magnitude / getgenv().FlightSpeed
+    local t3 = TweenService:Create(rootPart, TweenInfo.new(t3Time, Enum.EasingStyle.Linear), {CFrame = CFrame.new(wayPointDestination)})
+    t3:Play()
+    t3.Completed:Wait()
+
     rootPart.Anchored = false 
 
-    -- Force collection through server touch interest
+    -- Force touch interest
     if targetPart and rootPart and firetouchinterest then
         firetouchinterest(rootPart, targetPart, 0)
         task.wait(0.05)
         firetouchinterest(rootPart, targetPart, 1)
     end
+    
+    getgenv().IsFlying = false -- Resume treadmill availability
 end
 
 -- ==========================================
 -- CORE SYSTEMS: AUTOMATION (UPGRADES & CLAIMING)
 -- ==========================================
 local function ExecuteUpgrades()
-    -- Method 1: Fire all ProximityPrompts or Touch Interests named "Upgrade"
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj.Name:lower():match("upgrade") then
             if obj:IsA("ProximityPrompt") then
@@ -217,20 +238,18 @@ local function ExecuteUpgrades()
         end
     end
 
-    -- Method 2: Fire all hidden RemoteEvents related to upgrading
     for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
         if remote:IsA("RemoteEvent") then
             local name = remote.Name:lower()
             if name:match("upgrade") or name:match("buy") or name:match("purchase") then
                 pcall(function() remote:FireServer() end)
-                pcall(function() remote:FireServer("Treadmill") end) -- Common hidden argument
+                pcall(function() remote:FireServer("Treadmill") end)
             end
         end
     end
 end
 
 local function ExecuteClaimIndex()
-    -- Method 1: Network Event Scraping for Index/Rewards
     for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
         if remote:IsA("RemoteEvent") then
             local name = remote.Name:lower()
@@ -240,7 +259,6 @@ local function ExecuteClaimIndex()
                 pcall(function() remote:FireServer("Index") end)
             end
         elseif remote:IsA("RemoteFunction") then
-            -- Wrap in task.spawn so it doesn't yield/freeze the script if the server ignores it
             local name = remote.Name:lower()
             if name:match("claim") or name:match("index") then
                 task.spawn(function()
@@ -255,11 +273,10 @@ end
 -- UI INTEGRATION & TOGGLES
 -- ==========================================
 
--- >> MAIN FARMING
 LeftGroupbox:AddToggle('AutoFarmToggle', {
     Text = 'Auto Farm Public Eggs',
     Default = false,
-    Tooltip = 'Flies to public map eggs. Ignores private bases/gardens.',
+    Tooltip = 'Flies safely above map to public eggs using Sky-Arc flight.',
     Callback = function(Value)
         getgenv().AutoFarmEnabled = Value
         ToggleNoclip(Value) 
@@ -282,20 +299,22 @@ LeftGroupbox:AddToggle('AutoFarmToggle', {
 LeftGroupbox:AddToggle('AutoTreadmillToggle', {
     Text = 'Auto Treadmill',
     Default = false,
-    Tooltip = 'Snaps you to the nearest treadmill to farm speed continuously.',
+    Tooltip = 'Snaps you to nearest treadmill when NOT actively flying to an egg.',
     Callback = function(Value)
         getgenv().AutoTreadmillEnabled = Value
         if Value then
             task.spawn(function()
                 while getgenv().AutoTreadmillEnabled do
-                    local character = LocalPlayer.Character
-                    local root = character and character:FindFirstChild("HumanoidRootPart")
-                    if root then
-                        -- Find treadmill
-                        for _, obj in pairs(Workspace:GetDescendants()) do
-                            if obj.Name:lower():match("treadmill") and obj:IsA("BasePart") then
-                                root.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
-                                break
+                    -- Only teleport to treadmill if not currently flying to an egg
+                    if not getgenv().IsFlying then
+                        local character = LocalPlayer.Character
+                        local root = character and character:FindFirstChild("HumanoidRootPart")
+                        if root then
+                            for _, obj in pairs(Workspace:GetDescendants()) do
+                                if obj.Name:lower():match("treadmill") and obj:IsA("BasePart") then
+                                    root.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                                    break
+                                end
                             end
                         end
                     end
@@ -306,18 +325,17 @@ LeftGroupbox:AddToggle('AutoTreadmillToggle', {
     end
 })
 
--- >> AUTOMATION & UPGRADES
 RightGroupbox:AddToggle('AutoUpgradeToggle', {
     Text = 'Auto Upgrade Treadmill',
     Default = false,
-    Tooltip = 'Automatically buys/triggers treadmill upgrades when you have enough cash.',
+    Tooltip = 'Automatically triggers treadmill upgrades.',
     Callback = function(Value)
         getgenv().AutoUpgradeEnabled = Value
         if Value then
             task.spawn(function()
                 while getgenv().AutoUpgradeEnabled do
                     ExecuteUpgrades()
-                    task.wait(2) -- Runs every 2 seconds to avoid ratelimiting
+                    task.wait(2)
                 end
             end)
         end
@@ -327,21 +345,20 @@ RightGroupbox:AddToggle('AutoUpgradeToggle', {
 RightGroupbox:AddToggle('AutoClaimToggle', {
     Text = 'Auto Claim Index/Rewards',
     Default = false,
-    Tooltip = 'Scrapes the game for claimable index rewards and claims them instantly.',
+    Tooltip = 'Claims all index rewards continuously.',
     Callback = function(Value)
         getgenv().AutoClaimEnabled = Value
         if Value then
             task.spawn(function()
                 while getgenv().AutoClaimEnabled do
                     ExecuteClaimIndex()
-                    task.wait(5) -- Runs every 5 seconds
+                    task.wait(5)
                 end
             end)
         end
     end
 })
 
--- >> MOVEMENT
 MovementGroupbox:AddSlider('FlightSpeedSlider', {
     Text = 'Flight Speed',
     Default = 100,
@@ -354,11 +371,10 @@ MovementGroupbox:AddSlider('FlightSpeedSlider', {
     end
 })
 
--- >> VISUALS
 ESPGroupbox:AddToggle('ESPToggle', {
     Text = 'Egg Highlight ESP',
     Default = false,
-    Tooltip = 'Highlights public map eggs in gold. Ignores player bases.',
+    Tooltip = 'Highlights public map eggs in gold.',
     Callback = function(Value)
         getgenv().ESPEnabled = Value
         UpdateESP()
